@@ -1,0 +1,1244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#00d9ff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="F.R.I.D.A.I.">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="apple-touch-icon" href="/icon-192.png">
+    <title>F.R.I.D.A.I.</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 100%);
+            min-height: 100vh;
+            min-height: -webkit-fill-available;
+            color: #fff;
+            overflow: hidden;
+        }
+
+        .container {
+            max-width: 100%;
+            height: 100vh;
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            padding: 10px;
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: 0;
+            overflow: hidden;
+        }
+
+        header {
+            text-align: center;
+            padding: 15px 10px;
+            flex-shrink: 0;
+            position: relative;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            background: linear-gradient(90deg, #00d9ff, #00ff88);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Always Listening Indicator */
+        .listening-indicator {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.7em;
+            color: #00ff88;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .listening-indicator.active {
+            opacity: 1;
+        }
+
+        .listening-dot {
+            width: 8px;
+            height: 8px;
+            background: #00ff88;
+            border-radius: 50%;
+            animation: pulse-dot 2s infinite;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.8); }
+        }
+
+        .chat-container {
+            flex: 1 1 0;
+            min-height: 0;
+            max-height: 100%;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 10px 5px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .message {
+            max-width: 85%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            animation: fadeIn 0.3s ease;
+            font-size: 15px;
+            line-height: 1.4;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.user {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.assistant {
+            background: rgba(255,255,255,0.1);
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+        }
+
+        .message .sender {
+            font-size: 0.75em;
+            opacity: 0.7;
+            margin-bottom: 4px;
+            font-weight: 600;
+        }
+
+        .tool-indicator {
+            background: rgba(0,217,255,0.2);
+            border: 1px solid rgba(0,217,255,0.4);
+            border-radius: 8px;
+            padding: 8px 12px;
+            margin: 5px 0;
+            font-size: 0.85em;
+            font-family: monospace;
+        }
+
+        .tool-indicator .tool-name {
+            color: #00d9ff;
+            font-weight: bold;
+        }
+
+        .controls {
+            flex: 0 0 auto;
+            padding: 12px 10px;
+            background: #0f0f1a;
+            margin: 0 -10px;
+            padding-bottom: calc(12px + env(safe-area-inset-bottom));
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .status {
+            text-align: center;
+            padding: 8px;
+            color: #888;
+            font-size: 0.85em;
+        }
+
+        .status.active {
+            color: #00ff88;
+        }
+
+        .status.listening-always {
+            color: #00d9ff;
+        }
+
+        .live-transcript {
+            background: rgba(0, 217, 255, 0.1);
+            border: 1px solid rgba(0, 217, 255, 0.3);
+            border-radius: 12px;
+            padding: 12px 16px;
+            margin: 8px 0;
+            min-height: 40px;
+            text-align: center;
+            font-size: 1.1em;
+            color: #fff;
+        }
+
+        .transcript-cursor {
+            animation: blink-cursor 1s infinite;
+            color: #00d9ff;
+        }
+
+        @keyframes blink-cursor {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+
+        .control-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .record-btn {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            border: none;
+            background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%);
+            color: white;
+            font-size: 1.8em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .record-btn:active {
+            transform: scale(0.95);
+        }
+
+        .record-btn.recording {
+            animation: pulse 1s infinite;
+            background: linear-gradient(135deg, #00d9ff 0%, #00ff88 100%);
+        }
+
+        .record-btn.always-on {
+            background: linear-gradient(135deg, #00d9ff 0%, #00ff88 100%);
+            box-shadow: 0 0 20px rgba(0,255,136,0.3);
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0,255,136,0.4); }
+            50% { transform: scale(1.05); box-shadow: 0 0 0 15px rgba(0,255,136,0); }
+        }
+
+        .record-btn svg {
+            width: 28px;
+            height: 28px;
+        }
+
+        .text-input-row {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .text-input {
+            flex: 1;
+            padding: 14px 16px;
+            border-radius: 25px;
+            border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.1);
+            color: white;
+            font-size: 16px;
+            outline: none;
+        }
+
+        .text-input::placeholder {
+            color: rgba(255,255,255,0.5);
+        }
+
+        .text-input:focus {
+            border-color: rgba(0,217,255,0.5);
+        }
+
+        .send-btn {
+            padding: 14px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 25px;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        .settings-row {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            margin-top: 12px;
+            flex-wrap: wrap;
+        }
+
+        select, .settings-row button {
+            padding: 10px 16px;
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.1);
+            color: white;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        select option {
+            background: #1a1a2e;
+            color: white;
+        }
+
+        .thinking {
+            display: flex;
+            gap: 5px;
+            padding: 15px;
+            align-items: center;
+        }
+
+        .thinking span {
+            width: 8px;
+            height: 8px;
+            background: #00d9ff;
+            border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+
+        .thinking span:nth-child(1) { animation-delay: -0.32s; }
+        .thinking span:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+
+        .visualizer {
+            display: flex;
+            gap: 3px;
+            height: 30px;
+            align-items: center;
+            justify-content: center;
+            margin: 8px 0;
+        }
+
+        .visualizer .bar {
+            width: 4px;
+            background: linear-gradient(to top, #00d9ff, #00ff88);
+            border-radius: 2px;
+        }
+
+        @media (max-width: 480px) {
+            header h1 { font-size: 1.3em; }
+            .message { max-width: 90%; font-size: 14px; }
+            .record-btn { width: 65px; height: 65px; }
+        }
+
+        /* Tap to play state */
+        body.waiting-for-tap .status {
+            color: #ff4b2b;
+            font-weight: bold;
+            font-size: 1em;
+            animation: blink 0.8s infinite;
+        }
+
+        body.waiting-for-tap::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 75, 43, 0.1);
+            pointer-events: none;
+            animation: pulse-bg 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.5; }
+        }
+
+        @keyframes pulse-bg {
+            0%, 100% { background: rgba(255, 75, 43, 0.05); }
+            50% { background: rgba(255, 75, 43, 0.15); }
+        }
+
+        /* Sleep mode */
+        body.sleep-mode .listening-indicator {
+            opacity: 0 !important;
+        }
+
+        body.sleep-mode .record-btn {
+            background: linear-gradient(135deg, #333 0%, #555 100%);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>F.R.I.D.A.I.</h1>
+            <div class="listening-indicator" id="listeningIndicator">
+                <div class="listening-dot"></div>
+                <span>Always Listening</span>
+            </div>
+        </header>
+
+        <div class="chat-container" id="chat">
+            <div class="message assistant" id="greeting-msg">
+                <div class="sender">F.R.I.D.A.I.</div>
+                <div class="text" id="greeting-text">Say "Hey Friday" to wake me up...</div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="status" id="status">Loading...</div>
+
+            <div class="live-transcript" id="liveTranscript" style="display: none;">
+                <span class="transcript-text" id="transcriptText"></span>
+                <span class="transcript-cursor">|</span>
+            </div>
+
+            <div class="visualizer" id="visualizer" style="display: none;">
+                <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+                <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+                <div class="bar"></div><div class="bar"></div>
+            </div>
+
+            <div class="control-row">
+                <button class="record-btn" id="recordBtn" ontouchstart="handleRecordStart(event)" ontouchend="handleRecordEnd(event)" onmousedown="handleRecordStart(event)" onmouseup="handleRecordEnd(event)">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+                        <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="text-input-row">
+                <input type="text" class="text-input" id="textInput" placeholder="Type a message..." onkeypress="handleKeyPress(event)">
+                <button class="send-btn" onclick="sendTextMessage()">Send</button>
+            </div>
+
+            <div class="settings-row">
+                <select id="voiceSelect" onchange="changeVoice()">
+                    <option value="">Loading voices...</option>
+                </select>
+                <button onclick="clearChat()">Clear</button>
+                <button onclick="toggleAutoSpeak()" id="autoSpeakBtn">Sound ON</button>
+                <button onclick="toggleAlwaysListen()" id="alwaysListenBtn">Always Listen</button>
+                <button onclick="installApp()" id="installBtn" style="display:none;background:linear-gradient(135deg,#00d9ff,#00ff88);font-weight:bold;">Install App</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Override fetch to add ngrok bypass header
+        const originalFetch = window.fetch;
+        window.fetch = function(url, options = {}) {
+            options.headers = options.headers || {};
+            if (typeof options.headers.set === "function") {
+                options.headers.set("ngrok-skip-browser-warning", "true");
+            } else {
+                options.headers["ngrok-skip-browser-warning"] = "true";
+            }
+            return originalFetch(url, options);
+        };
+
+        let mediaRecorder;
+        let audioChunks = [];
+        let isRecording = false;
+        let isManualRecording = false;
+        let autoSpeak = true;
+        let alwaysListen = true;
+        let audioContext, analyser;
+        let hasSpokenGreeting = false;
+        let hasActivated = false;
+        let currentAudio = null;
+        let continuousStream = null;
+        let isSleeping = false;
+        let isProcessing = false;
+        let accumulatedText = '';
+        let lastSpeechTime = 0;
+        let silenceTimeout = null;
+        let lastTranscription = '';  // Track last transcription to skip exact duplicates
+        let isTranscribing = false;  // Lock to prevent overlapping transcription requests
+        let isListening = false;  // Lock to prevent multiple simultaneous recordings
+        audioContext = null;
+        analyser = null;
+        let silenceStart = null;
+        let activeRecorder = null;
+        let activeChunks = [];
+
+        const GREETING_DISPLAY = "Welcome back! What can I help you with?";
+        const GREETING_SPOKEN = "Welcome back! What can I help you with?";
+        const WAKE_WORDS = ['hey friday', 'friday', 'hey fridai', 'fridai', 'hey fry day', 'fry day'];
+        const SLEEP_PHRASES = ['go to sleep', 'sleep mode', 'stop listening', 'goodbye friday'];
+
+        // Deduplicate overlapping text between chunks
+        function deduplicateText(existing, newText) {
+            if (!existing || !newText) return newText;
+
+            const existingWords = existing.toLowerCase().split(/\s+/);
+            const newWords = newText.toLowerCase().split(/\s+/);
+            const originalNewWords = newText.split(/\s+/);
+
+            // Check if new text starts with words from the end of existing text
+            // Look for overlap of up to 5 words
+            for (let overlap = Math.min(5, existingWords.length, newWords.length); overlap > 0; overlap--) {
+                const existingEnd = existingWords.slice(-overlap).join(' ');
+                const newStart = newWords.slice(0, overlap).join(' ');
+
+                if (existingEnd === newStart) {
+                    // Found overlap, return only the new portion
+                    return originalNewWords.slice(overlap).join(' ');
+                }
+            }
+
+            // Check if the entire new text is already contained at the end of existing
+            if (existing.toLowerCase().endsWith(newText.toLowerCase())) {
+                return '';
+            }
+
+            return newText;
+        }
+
+        // Load settings and initialize
+        async function init() {
+            loadSettings();
+            await loadVoices();
+            await loadServerSettings();
+            setStatus('Say "Hey Friday" to activate');
+            startWakeWordDetection();
+        }
+
+        function handleRecordStart(e) {
+            e.preventDefault();
+            if (hasActivated && !isProcessing) {
+                isManualRecording = true;
+                startRecording();
+            }
+        }
+
+        function handleRecordEnd(e) {
+            e.preventDefault();
+            if (isManualRecording) {
+                isManualRecording = false;
+                stopRecording();
+            }
+        }
+
+        async function startWakeWordDetection() {
+            try {
+                continuousStream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true
+                    }
+                });
+                listenContinuously();
+            } catch (e) {
+                console.error('Mic error:', e);
+                setStatus('Tap anywhere to activate');
+                document.body.addEventListener('click', activateFridai, { once: true });
+                document.body.addEventListener('touchstart', activateFridai, { once: true });
+            }
+        }
+
+        async function listenContinuously() {
+            // Prevent multiple simultaneous recording sessions
+            if (isListening) {
+                console.log('Already listening, skipping duplicate call');
+                return;
+            }
+
+            if (isSleeping) {
+                setStatus('Sleeping... Say "Hey Friday" to wake me');
+                return;
+            }
+
+            // Don't listen while processing or speaking
+            if (isProcessing || currentAudio) {
+                setTimeout(listenContinuously, 500);
+                return;
+            }
+
+            isListening = true;
+
+            try {
+                // Get fresh microphone stream
+                continuousStream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true
+                    }
+                });
+            } catch (e) {
+                console.error('Failed to get microphone:', e);
+                setStatus('Mic error - tap to retry');
+                isListening = false;
+                setTimeout(listenContinuously, 2000);
+                return;
+            }
+
+            if (hasActivated && alwaysListen) {
+                setStatus('Listening... (speak, then pause to send)');
+                document.getElementById('listeningIndicator').classList.add('active');
+                document.getElementById('recordBtn').classList.add('always-on');
+            } else if (!hasActivated) {
+                setStatus('Say "Hey Friday" to activate');
+            }
+
+            // Set up audio analysis for voice activity detection
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            analyser = audioContext.createAnalyser();
+            analyser.fftSize = 512;
+            analyser.smoothingTimeConstant = 0.5;
+            const source = audioContext.createMediaStreamSource(continuousStream);
+            source.connect(analyser);
+
+            // Start recording
+            activeChunks = [];
+            try {
+                activeRecorder = new MediaRecorder(continuousStream);
+            } catch (e) {
+                console.error('MediaRecorder error:', e);
+                isListening = false;
+                continuousStream.getTracks().forEach(t => t.stop());
+                continuousStream = null;
+                setTimeout(listenContinuously, 500);
+                return;
+            }
+
+            activeRecorder.ondataavailable = (e) => {
+                if (e.data.size > 0) {
+                    activeChunks.push(e.data);
+                }
+            };
+
+            activeRecorder.onstop = async () => {
+                // Clean up audio context
+                if (audioContext) {
+                    audioContext.close();
+                    audioContext = null;
+                }
+
+                // Stop stream
+                if (continuousStream) {
+                    continuousStream.getTracks().forEach(track => track.stop());
+                    continuousStream = null;
+                }
+
+                isListening = false;
+                if (isManualRecording) return;
+
+                // Process the complete recording
+                if (activeChunks.length > 0) {
+                    const audioBlob = new Blob(activeChunks, { type: 'audio/webm' });
+                    activeChunks = [];
+
+                    if (audioBlob.size > 1000) {  // Only process if there's meaningful audio
+                        isTranscribing = true;
+                        const transcription = await transcribeAudio(audioBlob);
+                        isTranscribing = false;
+
+                        if (transcription && transcription.trim()) {
+                            const text = transcription.toLowerCase();
+
+                            // Check for sleep command
+                            if (hasActivated && SLEEP_PHRASES.some(p => text.includes(p))) {
+                                await goToSleep();
+                                return;
+                            }
+
+                            // Check for wake word
+                            const hasWakeWord = WAKE_WORDS.some(w => text.includes(w));
+
+                            if (!hasActivated && hasWakeWord) {
+                                await activateFridai();
+                            } else if (hasActivated) {
+                                // Process the complete utterance
+                                const cleaned = transcription.replace(/hey friday|friday|hey fridai|fridai/gi, '').trim();
+                                if (cleaned.length > 2) {
+                                    await processCommand(cleaned);
+                                } else if (hasWakeWord) {
+                                    await speakText("Yes? I'm listening.");
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Continue listening
+                if (!isSleeping && !isProcessing) {
+                    setTimeout(listenContinuously, 300);
+                }
+            };
+
+            activeRecorder.onerror = (e) => {
+                console.error('Recorder error:', e);
+                isListening = false;
+                if (continuousStream) {
+                    continuousStream.getTracks().forEach(t => t.stop());
+                    continuousStream = null;
+                }
+                setTimeout(listenContinuously, 500);
+            };
+
+            // Start recording with timeslice to get data periodically
+            activeRecorder.start(100);
+
+            // Voice activity detection loop
+            let speaking = false;
+            let silenceStartTime = null;
+            const SILENCE_THRESHOLD = 15;  // Audio level threshold
+            const SILENCE_DURATION = 1500;  // 1.5 seconds of silence to stop
+
+            function checkAudioLevel() {
+                if (!analyser || !activeRecorder || activeRecorder.state !== 'recording') {
+                    return;
+                }
+
+                const dataArray = new Uint8Array(analyser.frequencyBinCount);
+                analyser.getByteFrequencyData(dataArray);
+                const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
+
+                if (average > SILENCE_THRESHOLD) {
+                    // Sound detected
+                    speaking = true;
+                    silenceStartTime = null;
+                } else if (speaking) {
+                    // Was speaking, now silent
+                    if (!silenceStartTime) {
+                        silenceStartTime = Date.now();
+                    } else if (Date.now() - silenceStartTime > SILENCE_DURATION) {
+                        // Silence duration exceeded, stop recording
+                        console.log('Silence detected, stopping recording');
+                        if (activeRecorder && activeRecorder.state === 'recording') {
+                            activeRecorder.stop();
+                        }
+                        return;
+                    }
+                }
+
+                // Continue checking
+                requestAnimationFrame(checkAudioLevel);
+            }
+
+            // Also set a maximum recording time (30 seconds)
+            setTimeout(() => {
+                if (activeRecorder && activeRecorder.state === 'recording') {
+                    console.log('Max recording time reached');
+                    activeRecorder.stop();
+                }
+            }, 30000);
+
+            // Start monitoring audio levels
+            checkAudioLevel();
+        }
+
+        async function transcribeAudio(audioBlob) {
+            try {
+                const reader = new FileReader();
+                return new Promise((resolve) => {
+                    reader.onloadend = async () => {
+                        try {
+                            const res = await fetch('/transcribe', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ audio: reader.result })
+                            });
+                            const data = await res.json();
+                            resolve(data.text || null);
+                        } catch (e) {
+                            resolve(null);
+                        }
+                    };
+                    reader.readAsDataURL(audioBlob);
+                });
+            } catch (e) {
+                return null;
+            }
+        }
+
+        async function processCommand(text) {
+            if (isProcessing) return;
+            isProcessing = true;
+
+            // Clear transcript and silence timeout
+            hideLiveTranscript();
+
+            document.getElementById('listeningIndicator').classList.remove('active');
+            document.getElementById('recordBtn').classList.remove('always-on');
+
+            addMessage(text, 'user');
+            await getChatResponse(text);
+
+            isProcessing = false;
+        }
+
+        async function activateFridai() {
+            if (hasActivated) return;
+            hasActivated = true;
+
+            // Reset any accumulated text
+            accumulatedText = '';
+            hideLiveTranscript();
+
+            document.getElementById('greeting-text').textContent = GREETING_DISPLAY;
+            document.getElementById('listeningIndicator').classList.add('active');
+            document.getElementById('recordBtn').classList.add('always-on');
+
+            if (autoSpeak && !hasSpokenGreeting) {
+                hasSpokenGreeting = true;
+                await speakText(GREETING_SPOKEN);
+            } else {
+                setStatus('Always listening... speak anytime!');
+            }
+        }
+
+        async function goToSleep() {
+            isSleeping = true;
+            hasActivated = false;
+            document.body.classList.add('sleep-mode');
+            document.getElementById('listeningIndicator').classList.remove('active');
+            document.getElementById('recordBtn').classList.remove('always-on');
+
+            await speakText("Going to sleep. Say Hey Friday when you need me.");
+            setStatus('Sleeping... Say "Hey Friday" to wake me');
+
+            // After sleep, still listen for wake word
+            setTimeout(() => {
+                isSleeping = false;
+                document.body.classList.remove('sleep-mode');
+                listenContinuously();
+            }, 2000);
+        }
+
+        function toggleAlwaysListen() {
+            alwaysListen = !alwaysListen;
+            document.getElementById('alwaysListenBtn').textContent = alwaysListen ? 'Always Listen' : 'Push to Talk';
+
+            if (alwaysListen && hasActivated) {
+                document.getElementById('listeningIndicator').classList.add('active');
+                document.getElementById('recordBtn').classList.add('always-on');
+                listenContinuously();
+            } else {
+                document.getElementById('listeningIndicator').classList.remove('active');
+                document.getElementById('recordBtn').classList.remove('always-on');
+            }
+
+            saveSettings();
+        }
+
+        function loadSettings() {
+            const saved = localStorage.getItem('fridaySettings');
+            if (saved) {
+                const settings = JSON.parse(saved);
+                autoSpeak = settings.autoSpeak !== undefined ? settings.autoSpeak : true;
+                alwaysListen = settings.alwaysListen !== undefined ? settings.alwaysListen : true;
+                document.getElementById('autoSpeakBtn').textContent = autoSpeak ? 'Sound ON' : 'Sound OFF';
+                document.getElementById('alwaysListenBtn').textContent = alwaysListen ? 'Always Listen' : 'Push to Talk';
+            }
+        }
+
+        function saveSettings() {
+            const settings = {
+                autoSpeak: autoSpeak,
+                alwaysListen: alwaysListen,
+                voiceId: document.getElementById('voiceSelect').value
+            };
+            localStorage.setItem('fridaySettings', JSON.stringify(settings));
+
+            fetch('/save_settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(settings)
+            }).catch(e => console.log('Could not sync settings to server'));
+        }
+
+        async function loadServerSettings() {
+            try {
+                const res = await fetch('/get_settings');
+                const settings = await res.json();
+                if (settings.voiceId) {
+                    document.getElementById('voiceSelect').value = settings.voiceId;
+                    await fetch('/set_voice', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ voice_id: settings.voiceId })
+                    });
+                }
+                if (settings.autoSpeak !== undefined) {
+                    autoSpeak = settings.autoSpeak;
+                    document.getElementById('autoSpeakBtn').textContent = autoSpeak ? 'Sound ON' : 'Sound OFF';
+                }
+            } catch (e) { console.log('No server settings found'); }
+        }
+
+        async function loadVoices() {
+            try {
+                const response = await fetch('/voices');
+                const data = await response.json();
+                const select = document.getElementById('voiceSelect');
+                const savedVoice = localStorage.getItem('fridaySettings') ?
+                    JSON.parse(localStorage.getItem('fridaySettings')).voiceId : null;
+
+                select.innerHTML = data.voices.map(v =>
+                    `<option value="${v.id}" ${v.id === (savedVoice || '21m00Tcm4TlvDq8ikWAM') ? 'selected' : ''}>${v.name}</option>`
+                ).join('');
+
+                if (savedVoice) {
+                    await fetch('/set_voice', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ voice_id: savedVoice })
+                    });
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        async function changeVoice() {
+            const voiceId = document.getElementById('voiceSelect').value;
+            await fetch('/set_voice', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ voice_id: voiceId })
+            });
+            saveSettings();
+        }
+
+        function toggleAutoSpeak() {
+            autoSpeak = !autoSpeak;
+            document.getElementById('autoSpeakBtn').textContent = autoSpeak ? 'Sound ON' : 'Sound OFF';
+            saveSettings();
+        }
+
+        async function startRecording() {
+            if (isRecording) return;
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+
+                audioContext = new AudioContext();
+                analyser = audioContext.createAnalyser();
+                const source = audioContext.createMediaStreamSource(stream);
+                source.connect(analyser);
+                analyser.fftSize = 32;
+                visualize();
+
+                mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
+                mediaRecorder.onstop = async () => {
+                    document.getElementById('visualizer').style.display = 'none';
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    await processAudio(audioBlob);
+                    stream.getTracks().forEach(track => track.stop());
+                };
+
+                mediaRecorder.start();
+                isRecording = true;
+                document.getElementById('recordBtn').classList.add('recording');
+                document.getElementById('status').textContent = 'Listening...';
+                document.getElementById('status').classList.add('active');
+                document.getElementById('visualizer').style.display = 'flex';
+            } catch (e) {
+                setStatus('Mic access denied');
+            }
+        }
+
+        function visualize() {
+            if (!isRecording) return;
+            const bars = document.querySelectorAll('.visualizer .bar');
+            const dataArray = new Uint8Array(analyser.frequencyBinCount);
+            analyser.getByteFrequencyData(dataArray);
+            bars.forEach((bar, i) => {
+                bar.style.height = Math.max(4, dataArray[i] / 6) + 'px';
+            });
+            requestAnimationFrame(visualize);
+        }
+
+        function stopRecording() {
+            if (mediaRecorder && isRecording) {
+                mediaRecorder.stop();
+                isRecording = false;
+                document.getElementById('recordBtn').classList.remove('recording');
+                setStatus('Processing...');
+            }
+        }
+
+        async function processAudio(audioBlob) {
+            isProcessing = true;
+            setStatus('Transcribing...');
+
+            const text = await transcribeAudio(audioBlob);
+
+            if (!text || text.length < 2) {
+                setStatus('Could not understand. Try again.');
+                isProcessing = false;
+                if (alwaysListen) listenContinuously();
+                return;
+            }
+
+            addMessage(text, 'user');
+            await getChatResponse(text);
+            isProcessing = false;
+        }
+
+        async function sendTextMessage() {
+            const input = document.getElementById('textInput');
+            const text = input.value.trim();
+            if (!text) return;
+            input.value = '';
+
+            if (!hasActivated) {
+                hasActivated = true;
+                document.getElementById('greeting-text').textContent = GREETING_DISPLAY;
+            }
+
+            addMessage(text, 'user');
+            await getChatResponse(text);
+        }
+
+        function handleKeyPress(e) {
+            if (e.key === 'Enter') sendTextMessage();
+        }
+
+        async function getChatResponse(userMessage) {
+            isProcessing = true;
+            setStatus('F.R.I.D.A.I. is thinking...');
+            showThinking();
+
+            document.getElementById('listeningIndicator').classList.remove('active');
+
+            try {
+                const res = await fetch('/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: userMessage })
+                });
+                const data = await res.json();
+                hideThinking();
+
+                if (data.error) {
+                    setStatus('Error: ' + data.error);
+                    isProcessing = false;
+                    return;
+                }
+
+                if (data.tool_results && data.tool_results.length > 0) {
+                    data.tool_results.forEach(tr => {
+                        addToolIndicator(tr.tool, tr.input, tr.result);
+                    });
+                }
+
+                addMessage(data.response, 'assistant');
+
+                if (autoSpeak && data.response) {
+                    await speakText(data.response);
+                } else {
+                    isProcessing = false;
+                    if (alwaysListen && hasActivated) {
+                        listenContinuously();
+                    }
+                }
+            } catch (e) {
+                hideThinking();
+                setStatus('Error: ' + e.message);
+                isProcessing = false;
+            }
+        }
+
+        async function speakText(text) {
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio.currentTime = 0;
+                currentAudio = null;
+            }
+
+            setStatus('Speaking...');
+            try {
+                const res = await fetch('/speak', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: text })
+                });
+                const data = await res.json();
+                if (data.error) {
+                    setStatus('TTS Error: ' + data.error);
+                    isProcessing = false;
+                    return;
+                }
+
+                currentAudio = new Audio('data:audio/mpeg;base64,' + data.audio);
+
+                currentAudio.onended = () => {
+                    currentAudio = null;
+                    isProcessing = false;
+
+                    if (alwaysListen && hasActivated && !isSleeping) {
+                        setStatus('Listening... speak anytime');
+                        document.getElementById('listeningIndicator').classList.add('active');
+                        document.getElementById('recordBtn').classList.add('always-on');
+                        listenContinuously();
+                    } else {
+                        setStatus('Tap mic to speak');
+                    }
+                };
+
+                currentAudio.onerror = (e) => {
+                    console.error('Audio error:', e);
+                    setStatus('Audio error - try again');
+                    currentAudio = null;
+                    isProcessing = false;
+                };
+
+                try {
+                    await currentAudio.play();
+                } catch (playError) {
+                    console.log('Autoplay blocked:', playError.message);
+                    setStatus('>>> TAP TO HEAR FRIDAY <<<');
+                    document.body.classList.add('waiting-for-tap');
+
+                    const playOnTap = async () => {
+                        try {
+                            if (currentAudio) await currentAudio.play();
+                        } catch (e) {
+                            console.error('Play failed:', e);
+                        }
+                        document.body.classList.remove('waiting-for-tap');
+                    };
+
+                    document.body.addEventListener('click', playOnTap, { once: true });
+                    document.body.addEventListener('touchstart', playOnTap, { once: true });
+                }
+            } catch (e) {
+                console.error('Speak error:', e);
+                setStatus('TTS Error: ' + e.message);
+                isProcessing = false;
+            }
+        }
+
+        function addMessage(text, sender) {
+            const chat = document.getElementById('chat');
+            const div = document.createElement('div');
+            div.className = `message ${sender}`;
+            div.innerHTML = `<div class="sender">${sender === 'user' ? 'You' : 'F.R.I.D.A.I.'}</div><div class="text">${text}</div>`;
+            chat.appendChild(div);
+            chat.scrollTop = chat.scrollHeight;
+        }
+
+        function addToolIndicator(toolName, input, result) {
+            const chat = document.getElementById('chat');
+            const div = document.createElement('div');
+            div.className = 'tool-indicator';
+            let inputStr = typeof input === 'object' ? JSON.stringify(input).substring(0, 100) : input;
+            div.innerHTML = `<span class="tool-name">${toolName}</span>: ${inputStr}...`;
+            chat.appendChild(div);
+            chat.scrollTop = chat.scrollHeight;
+        }
+
+        function showThinking() {
+            const chat = document.getElementById('chat');
+            const div = document.createElement('div');
+            div.className = 'message assistant thinking-msg';
+            div.innerHTML = '<div class="thinking"><span></span><span></span><span></span></div>';
+            chat.appendChild(div);
+            chat.scrollTop = chat.scrollHeight;
+        }
+
+        function hideThinking() {
+            const el = document.querySelector('.thinking-msg');
+            if (el) el.remove();
+        }
+
+        function setStatus(text) {
+            const status = document.getElementById('status');
+            status.textContent = text;
+            status.classList.toggle('active', text.includes('Listening') || text.includes('Speaking'));
+            status.classList.toggle('listening-always', text.includes('speak anytime'));
+        }
+
+        function showLiveTranscript(text) {
+            const container = document.getElementById('liveTranscript');
+            const textSpan = document.getElementById('transcriptText');
+            container.style.display = 'block';
+            textSpan.textContent = text;
+            setStatus('Listening... (pause to send)');
+        }
+
+        function hideLiveTranscript() {
+            document.getElementById('liveTranscript').style.display = 'none';
+            document.getElementById('transcriptText').textContent = '';
+            accumulatedText = '';
+            if (silenceTimeout) {
+                clearTimeout(silenceTimeout);
+                silenceTimeout = null;
+            }
+        }
+
+        async function clearChat() {
+            await fetch('/clear', { method: 'POST' });
+            hasSpokenGreeting = false;
+            document.getElementById('chat').innerHTML = `
+                <div class="message assistant">
+                    <div class="sender">F.R.I.D.A.I.</div>
+                    <div class="text">Chat cleared! How can I help you?</div>
+                </div>`;
+            if (autoSpeak) {
+                await speakText("Chat cleared! How can I help you?");
+            }
+        }
+
+        // Initialize on page load
+        init();
+
+        // Register service worker for PWA
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js', {updateViaCache: 'none'})
+                .then(reg => console.log('Service Worker registered'))
+                .catch(err => console.log('SW registration failed:', err));
+        }
+
+        // PWA Install prompt handler
+        let deferredPrompt = null;
+        window.addEventListener("beforeinstallprompt", (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            document.getElementById("installBtn").style.display = "inline-block";
+            console.log("Install prompt ready");
+        });
+
+        window.addEventListener("appinstalled", () => {
+            document.getElementById("installBtn").style.display = "none";
+            deferredPrompt = null;
+            console.log("App installed!");
+        });
+
+        function installApp() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((result) => {
+                    if (result.outcome === "accepted") {
+                        console.log("User accepted install");
+                    }
+                    deferredPrompt = null;
+                });
+            }
+        }
+
+        // Keep screen awake when always listening (if supported)
+        if ('wakeLock' in navigator && alwaysListen) {
+            navigator.wakeLock.request('screen').catch(e => console.log('Wake lock not available'));
+        }
+    </script>
+</body>
+</html>

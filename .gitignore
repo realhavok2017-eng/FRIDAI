@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+
+# Logs and temp files
+*.log
+server.log
+*.pid
+
+# User data (don't commit)
+conversation_history.json
+user_settings.json
+smart_home_config.json
+
+# Environment
+.env
+venv/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+
+# Temp fix scripts (one-off patches)
+add_debug.py
+fix_*.py
+update_*.py
+new_tools.py
+create_icons.py
+templates/index.html.bak
+.env
