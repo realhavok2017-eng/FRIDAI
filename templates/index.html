@@ -1293,6 +1293,402 @@
             opacity: 0.2;
         }
 
+        /* CHILL STATE - Relaxed, peaceful waiting */
+        .friday-avatar-container.chill .avatar-glow {
+            background: radial-gradient(circle, rgba(100, 200, 255, 0.25) 0%, transparent 70%);
+            animation: chill-glow 6s ease-in-out infinite;
+        }
+
+        @keyframes chill-glow {
+            0%, 100% { opacity: 0.4; transform: translate(-50%, -50%) scale(1); }
+            50% { opacity: 0.6; transform: translate(-50%, -50%) scale(1.05); }
+        }
+
+        .friday-avatar-container.chill .avatar-core {
+            background: radial-gradient(circle at 35% 35%,
+                #e0f0ff 0%,
+                #88ccff 20%,
+                #4488cc 50%,
+                #2266aa 80%,
+                #114477 100%);
+            box-shadow:
+                0 0 15px rgba(100, 180, 255, 0.6),
+                0 0 30px rgba(100, 180, 255, 0.3),
+                inset 0 0 15px rgba(255, 255, 255, 0.4);
+            animation: chill-breathe 4s ease-in-out infinite;
+        }
+
+        @keyframes chill-breathe {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.03); }
+        }
+
+        .friday-avatar-container.chill .avatar-ring-outer {
+            animation: ring-rotate 15s linear infinite;
+            border-top-color: rgba(100, 180, 255, 0.4);
+            opacity: 0.6;
+        }
+
+        .friday-avatar-container.chill .avatar-ring-middle {
+            animation: ring-rotate-reverse 12s linear infinite;
+            opacity: 0.5;
+        }
+
+        .friday-avatar-container.chill .avatar-ring-inner {
+            animation: ring-rotate 10s linear infinite;
+            opacity: 0.4;
+        }
+
+        .friday-avatar-container.chill .particle {
+            background: #88ccff;
+            box-shadow: 0 0 5px #88ccff;
+            animation: particle-drift 5s ease-in-out infinite;
+        }
+
+        @keyframes particle-drift {
+            0%, 100% { opacity: 0.3; transform: scale(0.8); }
+            50% { opacity: 0.6; transform: scale(1.2); }
+        }
+
+        .friday-avatar-container.chill .avatar-particles {
+            animation: particles-orbit 20s linear infinite;
+        }
+
+        .friday-avatar-container.chill .arc-line {
+            background: linear-gradient(90deg, rgba(100, 180, 255, 0.4), transparent);
+            opacity: 0.4;
+        }
+
+        /* ATTENTIVE STATE - Alert, ready to listen */
+        .friday-avatar-container.attentive .avatar-glow {
+            background: radial-gradient(circle, rgba(0, 200, 150, 0.4) 0%, transparent 70%);
+            animation: attentive-pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes attentive-pulse {
+            0%, 100% { opacity: 0.5; transform: translate(-50%, -50%) scale(1); }
+            50% { opacity: 0.8; transform: translate(-50%, -50%) scale(1.08); }
+        }
+
+        .friday-avatar-container.attentive .avatar-core {
+            background: radial-gradient(circle at 35% 35%,
+                #ffffff 0%,
+                #00ddaa 20%,
+                #00aa88 50%,
+                #008866 80%,
+                #005544 100%);
+            box-shadow:
+                0 0 25px rgba(0, 220, 170, 0.8),
+                0 0 50px rgba(0, 220, 170, 0.4),
+                inset 0 0 18px rgba(255, 255, 255, 0.5);
+            animation: attentive-ready 1.5s ease-in-out infinite;
+        }
+
+        @keyframes attentive-ready {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.06); }
+        }
+
+        .friday-avatar-container.attentive .avatar-ring-outer,
+        .friday-avatar-container.attentive .avatar-ring-middle,
+        .friday-avatar-container.attentive .avatar-ring-inner {
+            border-top-color: rgba(0, 220, 170, 0.7);
+            border-right-color: rgba(0, 220, 170, 0.3);
+        }
+
+        .friday-avatar-container.attentive .avatar-ring-outer {
+            animation: ring-rotate 5s linear infinite;
+        }
+
+        .friday-avatar-container.attentive .particle {
+            background: #00ddaa;
+            box-shadow: 0 0 8px #00ddaa;
+        }
+
+        .friday-avatar-container.attentive .avatar-particles {
+            animation: particles-orbit 8s linear infinite;
+        }
+
+        .friday-avatar-container.attentive .arc-line {
+            background: linear-gradient(90deg, rgba(0, 220, 170, 0.7), transparent);
+            animation: arc-pulse 1s ease-in-out infinite alternate;
+        }
+
+        /* WORKING STATE - Executing tasks, amber/orange, busy */
+        .friday-avatar-container.working .avatar-glow {
+            background: radial-gradient(circle, rgba(255, 170, 50, 0.5) 0%, transparent 70%);
+            animation: working-glow 0.8s ease-in-out infinite;
+        }
+
+        @keyframes working-glow {
+            0%, 100% { opacity: 0.5; transform: translate(-50%, -50%) scale(1); }
+            50% { opacity: 0.9; transform: translate(-50%, -50%) scale(1.15); }
+        }
+
+        .friday-avatar-container.working .avatar-core {
+            background: radial-gradient(circle at 35% 35%,
+                #ffffff 0%,
+                #ffbb33 20%,
+                #ff9900 50%,
+                #cc6600 80%,
+                #884400 100%);
+            box-shadow:
+                0 0 35px rgba(255, 150, 0, 1),
+                0 0 70px rgba(255, 150, 0, 0.5),
+                inset 0 0 20px rgba(255, 255, 200, 0.6);
+            animation: working-pulse 0.6s ease-in-out infinite;
+        }
+
+        @keyframes working-pulse {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.08); }
+        }
+
+        .friday-avatar-container.working .avatar-ring-outer {
+            animation: ring-rotate 1.5s linear infinite;
+            border-top-color: rgba(255, 170, 50, 0.9);
+            border-right-color: rgba(255, 100, 0, 0.5);
+        }
+
+        .friday-avatar-container.working .avatar-ring-middle {
+            animation: ring-rotate-reverse 1s linear infinite;
+            border-top-color: rgba(255, 130, 0, 0.8);
+        }
+
+        .friday-avatar-container.working .avatar-ring-inner {
+            animation: ring-rotate 0.7s linear infinite;
+            border-color: rgba(255, 200, 100, 0.7);
+        }
+
+        .friday-avatar-container.working .particle {
+            background: #ffaa33;
+            box-shadow: 0 0 10px #ffaa33;
+            animation: particle-work 0.5s ease-in-out infinite;
+        }
+
+        @keyframes particle-work {
+            0%, 100% { opacity: 0.6; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.8); }
+        }
+
+        .friday-avatar-container.working .avatar-particles {
+            animation: particles-orbit 2s linear infinite;
+        }
+
+        .friday-avatar-container.working .arc-line {
+            background: linear-gradient(90deg, rgba(255, 170, 50, 1), transparent);
+            animation: arc-work 0.2s ease-in-out infinite alternate;
+        }
+
+        @keyframes arc-work {
+            0% { opacity: 0.6; width: 25px; }
+            100% { opacity: 1; width: 38px; }
+        }
+
+        /* SEARCHING STATE - Looking up info, scanning effect */
+        .friday-avatar-container.searching .avatar-glow {
+            background: radial-gradient(circle, rgba(0, 200, 255, 0.5) 0%, transparent 70%);
+            animation: search-glow 1.5s ease-in-out infinite;
+        }
+
+        @keyframes search-glow {
+            0%, 100% { opacity: 0.4; }
+            50% { opacity: 0.8; }
+        }
+
+        .friday-avatar-container.searching .avatar-core {
+            background: radial-gradient(circle at 35% 35%,
+                #ffffff 0%,
+                #00ddff 20%,
+                #0099cc 50%,
+                #006699 80%,
+                #004466 100%);
+            box-shadow:
+                0 0 30px rgba(0, 200, 255, 1),
+                0 0 60px rgba(0, 200, 255, 0.5),
+                inset 0 0 20px rgba(255, 255, 255, 0.6);
+            animation: search-scan 1.5s ease-in-out infinite;
+        }
+
+        @keyframes search-scan {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); }
+            25% { transform: translate(-50%, -50%) scale(1.05) rotate(5deg); }
+            75% { transform: translate(-50%, -50%) scale(1.05) rotate(-5deg); }
+        }
+
+        .friday-avatar-container.searching .avatar-ring-outer {
+            animation: ring-rotate 2s linear infinite;
+            border: 3px solid transparent;
+            border-top-color: rgba(0, 200, 255, 0.9);
+            border-bottom-color: rgba(0, 200, 255, 0.3);
+        }
+
+        .friday-avatar-container.searching .avatar-ring-middle {
+            animation: ring-rotate-reverse 1.5s linear infinite;
+            border: 2px solid transparent;
+            border-left-color: rgba(0, 220, 255, 0.8);
+            border-right-color: rgba(0, 220, 255, 0.8);
+        }
+
+        .friday-avatar-container.searching .avatar-ring-inner {
+            animation: search-ping 1s ease-out infinite;
+            border-color: rgba(0, 255, 255, 0.6);
+        }
+
+        @keyframes search-ping {
+            0% { transform: translate(-50%, -50%) scale(0.8); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(1.3); opacity: 0; }
+        }
+
+        .friday-avatar-container.searching .particle {
+            background: #00ddff;
+            box-shadow: 0 0 12px #00ddff;
+            animation: particle-search 0.8s ease-in-out infinite;
+        }
+
+        @keyframes particle-search {
+            0%, 100% { opacity: 0.3; transform: scale(1) translateY(0); }
+            50% { opacity: 1; transform: scale(1.5) translateY(-3px); }
+        }
+
+        .friday-avatar-container.searching .avatar-particles {
+            animation: particles-orbit 3s linear infinite;
+        }
+
+        .friday-avatar-container.searching .arc-line {
+            background: linear-gradient(90deg, rgba(0, 200, 255, 1), transparent);
+            animation: arc-search 0.4s ease-in-out infinite;
+        }
+
+        @keyframes arc-search {
+            0%, 100% { opacity: 0.4; width: 20px; }
+            50% { opacity: 1; width: 35px; }
+        }
+
+        /* SUCCESS STATE - Task completed, golden celebration */
+        .friday-avatar-container.success .avatar-glow {
+            background: radial-gradient(circle, rgba(255, 215, 0, 0.6) 0%, transparent 70%);
+            animation: success-burst 0.5s ease-out forwards;
+        }
+
+        @keyframes success-burst {
+            0% { transform: translate(-50%, -50%) scale(1); opacity: 0.8; }
+            50% { transform: translate(-50%, -50%) scale(1.5); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(1.2); opacity: 0.6; }
+        }
+
+        .friday-avatar-container.success .avatar-core {
+            background: radial-gradient(circle at 35% 35%,
+                #ffffff 0%,
+                #ffee00 20%,
+                #ffcc00 50%,
+                #ddaa00 80%,
+                #aa8800 100%);
+            box-shadow:
+                0 0 40px rgba(255, 215, 0, 1),
+                0 0 80px rgba(255, 215, 0, 0.6),
+                inset 0 0 25px rgba(255, 255, 255, 0.8);
+            animation: success-glow 0.3s ease-out forwards;
+        }
+
+        @keyframes success-glow {
+            0% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.2); }
+            100% { transform: translate(-50%, -50%) scale(1.05); }
+        }
+
+        .friday-avatar-container.success .avatar-ring-outer,
+        .friday-avatar-container.success .avatar-ring-middle,
+        .friday-avatar-container.success .avatar-ring-inner {
+            border-color: rgba(255, 215, 0, 0.8);
+            animation: success-ring 0.5s ease-out forwards;
+        }
+
+        @keyframes success-ring {
+            0% { transform: translate(-50%, -50%) scale(1) rotate(0deg); }
+            100% { transform: translate(-50%, -50%) scale(1.1) rotate(45deg); }
+        }
+
+        .friday-avatar-container.success .particle {
+            background: #ffdd00;
+            box-shadow: 0 0 15px #ffdd00;
+            animation: particle-celebrate 0.5s ease-out forwards;
+        }
+
+        @keyframes particle-celebrate {
+            0% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(2.5) translateY(-10px); opacity: 0; }
+        }
+
+        .friday-avatar-container.success .arc-line {
+            background: linear-gradient(90deg, rgba(255, 215, 0, 1), transparent);
+            animation: arc-success 0.3s ease-out forwards;
+        }
+
+        @keyframes arc-success {
+            0% { width: 30px; opacity: 1; }
+            100% { width: 50px; opacity: 0.5; }
+        }
+
+        /* CONFUSED STATE - Error or didn't understand */
+        .friday-avatar-container.confused .avatar-glow {
+            background: radial-gradient(circle, rgba(255, 100, 100, 0.5) 0%, transparent 70%);
+            animation: confused-flash 0.3s ease-in-out 3;
+        }
+
+        @keyframes confused-flash {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 0.8; }
+        }
+
+        .friday-avatar-container.confused .avatar-core {
+            background: radial-gradient(circle at 35% 35%,
+                #ffcccc 0%,
+                #ff6666 20%,
+                #cc4444 50%,
+                #993333 80%,
+                #662222 100%);
+            box-shadow:
+                0 0 30px rgba(255, 100, 100, 0.8),
+                0 0 60px rgba(255, 100, 100, 0.4),
+                inset 0 0 15px rgba(255, 200, 200, 0.5);
+            animation: confused-shake 0.1s ease-in-out 5;
+        }
+
+        @keyframes confused-shake {
+            0%, 100% { transform: translate(-50%, -50%) rotate(0deg); }
+            25% { transform: translate(-50%, -50%) rotate(-3deg) scale(0.98); }
+            75% { transform: translate(-50%, -50%) rotate(3deg) scale(0.98); }
+        }
+
+        .friday-avatar-container.confused .avatar-ring-outer,
+        .friday-avatar-container.confused .avatar-ring-middle,
+        .friday-avatar-container.confused .avatar-ring-inner {
+            border-top-color: rgba(255, 100, 100, 0.7);
+            animation: confused-ring 0.2s ease-in-out 3;
+        }
+
+        @keyframes confused-ring {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        .friday-avatar-container.confused .particle {
+            background: #ff6666;
+            box-shadow: 0 0 8px #ff6666;
+            animation: particle-scatter 0.5s ease-out forwards;
+        }
+
+        @keyframes particle-scatter {
+            0% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(0.5) translateY(5px); opacity: 0.3; }
+        }
+
+        .friday-avatar-container.confused .arc-line {
+            background: linear-gradient(90deg, rgba(255, 100, 100, 0.8), transparent);
+            animation: confused-flash 0.2s ease-in-out 3;
+        }
+
         /* Tap Feedback */
         .friday-avatar-container:active .avatar-core {
             transform: translate(-50%, -50%) scale(0.95);
@@ -1310,6 +1706,13 @@
         .friday-avatar-container.listening + .avatar-status { color: #00ff88; }
         .friday-avatar-container.thinking + .avatar-status { color: #667eea; }
         .friday-avatar-container.speaking + .avatar-status { color: #ff6b6b; }
+        .friday-avatar-container.chill + .avatar-status { color: #88ccff; }
+        .friday-avatar-container.attentive + .avatar-status { color: #00ddaa; }
+        .friday-avatar-container.working + .avatar-status { color: #ffaa33; }
+        .friday-avatar-container.searching + .avatar-status { color: #00ddff; }
+        .friday-avatar-container.success + .avatar-status { color: #ffdd00; }
+        .friday-avatar-container.confused + .avatar-status { color: #ff6666; }
+        .friday-avatar-container.sleeping + .avatar-status { color: #666666; }
 
         /* Responsive */
         @media (max-width: 480px) {
@@ -2685,28 +3088,65 @@
             }
         }
 
-        // Enhanced Avatar State Management
-        function setAvatarState(state) {
+        // Enhanced Avatar State Management with Full Mood System
+        const ALL_AVATAR_STATES = [
+            'listening', 'thinking', 'speaking', 'sleeping',
+            'chill', 'attentive', 'working', 'searching', 'success', 'confused'
+        ];
+
+        let currentAvatarState = '';
+        let stateTimeout = null;
+
+        function setAvatarState(state, duration = 0) {
             const avatar = document.getElementById('fridayAvatar');
             const statusEl = document.getElementById('avatarStatus');
 
+            // Clear any pending state timeout
+            if (stateTimeout) {
+                clearTimeout(stateTimeout);
+                stateTimeout = null;
+            }
+
             // Remove all states
-            avatar.classList.remove('listening', 'thinking', 'speaking', 'sleeping');
+            ALL_AVATAR_STATES.forEach(s => avatar.classList.remove(s));
 
             // Add new state
             if (state) {
                 avatar.classList.add(state);
             }
+            currentAvatarState = state;
 
             // Update status text
             const statusTexts = {
                 '': 'Tap to speak',
+                'chill': 'Relaxed',
+                'attentive': 'Ready to listen',
                 'listening': 'Listening...',
-                'thinking': 'Processing...',
+                'thinking': 'Thinking...',
+                'working': 'Working on it...',
+                'searching': 'Searching...',
                 'speaking': 'Speaking...',
+                'success': 'Done!',
+                'confused': 'Hmm?',
                 'sleeping': 'Say "Hey Friday"'
             };
             statusEl.textContent = statusTexts[state] || 'Tap to speak';
+
+            // Auto-return to chill state after duration (for temporary states like success)
+            if (duration > 0) {
+                stateTimeout = setTimeout(() => {
+                    setAvatarState('chill');
+                }, duration);
+            }
+        }
+
+        // Flash a temporary state then return to previous
+        function flashAvatarState(state, duration = 1500) {
+            const previousState = currentAvatarState;
+            setAvatarState(state);
+            stateTimeout = setTimeout(() => {
+                setAvatarState(previousState || 'chill');
+            }, duration);
         }
 
         // Hook setStatus to update avatar state
@@ -2714,19 +3154,56 @@
         setStatus = function(text) {
             originalSetStatus(text);
 
-            // Update avatar based on status
-            if (text.includes('Listening') || text.includes('speak anytime')) {
+            // Update avatar based on status text
+            const lowerText = text.toLowerCase();
+
+            if (lowerText.includes('listening') || lowerText.includes('speak anytime')) {
                 setAvatarState('listening');
-            } else if (text.includes('thinking') || text.includes('Processing') || text.includes('Transcribing')) {
+            } else if (lowerText.includes('transcribing')) {
                 setAvatarState('thinking');
-            } else if (text.includes('Speaking')) {
+            } else if (lowerText.includes('thinking') || lowerText.includes('processing')) {
+                setAvatarState('thinking');
+            } else if (lowerText.includes('speaking') || lowerText.includes('playing')) {
                 setAvatarState('speaking');
-            } else if (text.includes('Sleeping') || text.includes('wake me')) {
+            } else if (lowerText.includes('sleeping') || lowerText.includes('wake me')) {
                 setAvatarState('sleeping');
-            } else if (text.includes('Ready') || text.includes('Tap')) {
-                setAvatarState('');
+            } else if (lowerText.includes('running') || lowerText.includes('executing') || lowerText.includes('working')) {
+                setAvatarState('working');
+            } else if (lowerText.includes('searching') || lowerText.includes('looking') || lowerText.includes('fetching')) {
+                setAvatarState('searching');
+            } else if (lowerText.includes('error') || lowerText.includes('failed') || lowerText.includes('sorry')) {
+                flashAvatarState('confused', 2000);
+            } else if (lowerText.includes('done') || lowerText.includes('complete') || lowerText.includes('success')) {
+                flashAvatarState('success', 2000);
+            } else if (lowerText.includes('ready') || lowerText.includes('tap')) {
+                setAvatarState('chill');
+            } else if (lowerText.includes('waiting') || lowerText.includes('standby')) {
+                setAvatarState('attentive');
             }
         };
+
+        // Hook into tool execution to show working state
+        const originalAddToolIndicator = addToolIndicator;
+        addToolIndicator = function(toolName, input, result) {
+            originalAddToolIndicator(toolName, input, result);
+
+            // Show working state when tools are being used
+            const searchTools = ['web_search', 'search', 'lookup', 'find', 'get_'];
+            const isSearching = searchTools.some(t => toolName.toLowerCase().includes(t));
+
+            if (isSearching) {
+                setAvatarState('searching');
+            } else {
+                setAvatarState('working');
+            }
+        };
+
+        // Set initial chill state after page loads
+        setTimeout(() => {
+            if (!currentAvatarState || currentAvatarState === '') {
+                setAvatarState('chill');
+            }
+        }, 3000);
 
         // ============================================
         // NEW UI FUNCTIONALITY
