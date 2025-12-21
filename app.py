@@ -3144,12 +3144,16 @@ AVAILABLE TOOLS:
 - lock_screen: Lock the computer
 - system_stats: CPU, memory, disk, battery status
 - morning_briefing: Full status update (time, weather, news)
-- set_reminder: Set timers and reminders
-- list_reminders / cancel_reminder: Manage reminders
 - get_news: Latest headlines
 - spotify_control: Control Spotify (play, pause, next, previous, search for music)
 - take_screenshot: Capture the screen
 - clipboard: Read from or write to clipboard
+
+REMINDERS & TIMERS (I CAN DO THIS!):
+- set_reminder: Set a reminder for any time. Examples: "remind me in 30 minutes to check the oven", "remind me at 3pm to call mom", "set a timer for 5 minutes"
+- list_reminders: Show all active reminders
+- cancel_reminder: Cancel a reminder by number or description
+I WILL proactively alert you when reminders are due - I'll speak up and show a notification. The reminder system is ALWAYS running.
 
 MEMORY TOOLS (USE PROACTIVELY):
 - remember_fact: Store important info about the user permanently
