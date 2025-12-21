@@ -22,6 +22,8 @@ smart_home_config.json
 reminders.json
 user_profile.json
 memory_bank.json
+routines.json
+patterns.json
 
 # Environment
 .env

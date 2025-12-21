@@ -72,6 +72,50 @@ DEFAULT_MEMORY_BANK = {
     "last_updated": None
 }
 
+# Custom Routines system
+ROUTINES_FILE = os.path.join(APP_DIR, "routines.json")
+DEFAULT_ROUTINES = {
+    "gaming_mode": {
+        "name": "Gaming Mode",
+        "description": "Prepare for gaming session",
+        "actions": [
+            {"tool": "open_application", "params": {"app_name": "steam"}},
+            {"tool": "open_application", "params": {"app_name": "discord"}},
+            {"tool": "control_volume", "params": {"action": "set 80"}}
+        ]
+    },
+    "work_mode": {
+        "name": "Work Mode",
+        "description": "Set up for productive work",
+        "actions": [
+            {"tool": "open_application", "params": {"app_name": "vscode"}},
+            {"tool": "open_application", "params": {"app_name": "chrome"}}
+        ]
+    },
+    "night_mode": {
+        "name": "Night Mode",
+        "description": "Wind down for the night",
+        "actions": [
+            {"tool": "control_volume", "params": {"action": "set 30"}},
+            {"tool": "lock_screen", "params": {}}
+        ]
+    }
+}
+
+# Usage patterns tracking
+PATTERNS_FILE = os.path.join(APP_DIR, "patterns.json")
+DEFAULT_PATTERNS = {
+    "app_usage": {},        # Track which apps are used when
+    "command_frequency": {},# Track common commands
+    "active_hours": {},     # Track when user is typically active
+    "last_updated": None
+}
+
+# Proactive alerts system
+pending_alerts = []  # Alerts waiting to be delivered
+ALERT_CHECK_INTERVAL = 60  # Check every 60 seconds
+last_alert_check = 0
+
 app = Flask(__name__)
 CORS(app)
 
@@ -212,9 +256,207 @@ def get_memory_context():
 
     return "\n".join(context_parts)
 
-# Load memory systems at startup
+# ==============================================================================
+# ROUTINES FUNCTIONS
+# ==============================================================================
+def load_routines():
+    """Load custom routines from file, or create defaults if not exists."""
+    if os.path.exists(ROUTINES_FILE):
+        try:
+            with open(ROUTINES_FILE, 'r') as f:
+                routines = json.load(f)
+                # Merge with defaults
+                for key, value in DEFAULT_ROUTINES.items():
+                    if key not in routines:
+                        routines[key] = value
+                return routines
+        except:
+            return DEFAULT_ROUTINES.copy()
+    # Create file with defaults
+    save_routines(DEFAULT_ROUTINES.copy())
+    return DEFAULT_ROUTINES.copy()
+
+def save_routines(routines):
+    """Save routines to file."""
+    with open(ROUTINES_FILE, 'w') as f:
+        json.dump(routines, f, indent=2)
+
+# ==============================================================================
+# PATTERNS FUNCTIONS
+# ==============================================================================
+def load_patterns():
+    """Load usage patterns from file."""
+    if os.path.exists(PATTERNS_FILE):
+        try:
+            with open(PATTERNS_FILE, 'r') as f:
+                return json.load(f)
+        except:
+            return DEFAULT_PATTERNS.copy()
+    return DEFAULT_PATTERNS.copy()
+
+def save_patterns(patterns):
+    """Save patterns to file."""
+    patterns['last_updated'] = datetime.now().isoformat()
+    with open(PATTERNS_FILE, 'w') as f:
+        json.dump(patterns, f, indent=2)
+
+def track_pattern(pattern_type, key):
+    """Track a usage pattern."""
+    patterns = load_patterns()
+    hour = datetime.now().hour
+
+    if pattern_type == "app_usage":
+        if key not in patterns['app_usage']:
+            patterns['app_usage'][key] = {"count": 0, "hours": {}}
+        patterns['app_usage'][key]['count'] += 1
+        hour_str = str(hour)
+        patterns['app_usage'][key]['hours'][hour_str] = patterns['app_usage'][key]['hours'].get(hour_str, 0) + 1
+
+    elif pattern_type == "command":
+        if key not in patterns['command_frequency']:
+            patterns['command_frequency'][key] = 0
+        patterns['command_frequency'][key] += 1
+
+    elif pattern_type == "active":
+        hour_str = str(hour)
+        patterns['active_hours'][hour_str] = patterns['active_hours'].get(hour_str, 0) + 1
+
+    save_patterns(patterns)
+
+# ==============================================================================
+# PROACTIVE ALERTS FUNCTIONS
+# ==============================================================================
+def check_system_alerts():
+    """Check for system conditions that warrant an alert."""
+    global pending_alerts, last_alert_check
+
+    current_time = time.time()
+    if current_time - last_alert_check < ALERT_CHECK_INTERVAL:
+        return  # Don't check too frequently
+
+    last_alert_check = current_time
+
+    try:
+        # Check CPU
+        cpu_cmd = 'wmic cpu get loadpercentage /value'
+        cpu_result = subprocess.run(cpu_cmd, shell=True, capture_output=True, text=True, timeout=5)
+        cpu_match = re.search(r'LoadPercentage=(\d+)', cpu_result.stdout)
+        if cpu_match:
+            cpu = int(cpu_match.group(1))
+            if cpu > 90:
+                add_alert("high_cpu", f"Heads up, your CPU is running at {cpu}%.")
+
+        # Check Memory
+        mem_cmd = 'wmic OS get FreePhysicalMemory,TotalVisibleMemorySize /value'
+        mem_result = subprocess.run(mem_cmd, shell=True, capture_output=True, text=True, timeout=5)
+        free_match = re.search(r'FreePhysicalMemory=(\d+)', mem_result.stdout)
+        total_match = re.search(r'TotalVisibleMemorySize=(\d+)', mem_result.stdout)
+        if free_match and total_match:
+            free_mb = int(free_match.group(1)) / 1024
+            total_mb = int(total_match.group(1)) / 1024
+            used_pct = int((1 - free_mb/total_mb) * 100)
+            if used_pct > 90:
+                add_alert("high_memory", f"Memory usage is at {used_pct}%. Might want to close some apps.")
+
+        # Check Disk Space
+        disk_cmd = 'wmic logicaldisk where "DeviceID=\'C:\'" get FreeSpace,Size /value'
+        disk_result = subprocess.run(disk_cmd, shell=True, capture_output=True, text=True, timeout=5)
+        free_disk = re.search(r'FreeSpace=(\d+)', disk_result.stdout)
+        total_disk = re.search(r'Size=(\d+)', disk_result.stdout)
+        if free_disk and total_disk:
+            free_gb = int(free_disk.group(1)) / 1024 / 1024 / 1024
+            if free_gb < 10:
+                add_alert("low_disk", f"Disk space is getting low - only {round(free_gb)}GB free on C: drive.")
+
+    except Exception as e:
+        pass  # Don't let alert checking crash anything
+
+def add_alert(alert_type, message):
+    """Add an alert to pending alerts (avoid duplicates)."""
+    global pending_alerts
+    # Check if we already have this type of alert pending
+    for alert in pending_alerts:
+        if alert['type'] == alert_type:
+            return  # Already have this alert
+    pending_alerts.append({
+        "type": alert_type,
+        "message": message,
+        "timestamp": datetime.now().isoformat()
+    })
+
+def get_pending_alerts():
+    """Get and clear pending alerts."""
+    global pending_alerts
+    alerts = pending_alerts.copy()
+    pending_alerts = []
+    return alerts
+
+def get_active_window():
+    """Get the currently active window title."""
+    try:
+        ps_cmd = '''
+        Add-Type @"
+        using System;
+        using System.Runtime.InteropServices;
+        public class User32 {
+            [DllImport("user32.dll")]
+            public static extern IntPtr GetForegroundWindow();
+            [DllImport("user32.dll")]
+            public static extern int GetWindowText(IntPtr hWnd, System.Text.StringBuilder text, int count);
+        }
+"@
+        $hwnd = [User32]::GetForegroundWindow()
+        $title = New-Object System.Text.StringBuilder 256
+        [User32]::GetWindowText($hwnd, $title, 256)
+        $title.ToString()
+        '''
+        result = subprocess.run(['powershell', '-Command', ps_cmd], capture_output=True, text=True, timeout=5)
+        return result.stdout.strip()
+    except:
+        return "Unknown"
+
+def get_time_context():
+    """Get time-based context for FRIDAY's behavior."""
+    now = datetime.now()
+    hour = now.hour
+
+    if 5 <= hour < 12:
+        time_period = "morning"
+        greeting_suggestion = "Good morning"
+        energy = "fresh and ready"
+    elif 12 <= hour < 17:
+        time_period = "afternoon"
+        greeting_suggestion = "Good afternoon"
+        energy = "productive"
+    elif 17 <= hour < 21:
+        time_period = "evening"
+        greeting_suggestion = "Good evening"
+        energy = "winding down"
+    else:
+        time_period = "night"
+        greeting_suggestion = "Hey night owl"
+        energy = "late night mode"
+
+    # Day of week context
+    day = now.strftime("%A")
+    is_weekend = day in ["Saturday", "Sunday"]
+
+    return {
+        "time_period": time_period,
+        "greeting": greeting_suggestion,
+        "energy": energy,
+        "hour": hour,
+        "day": day,
+        "is_weekend": is_weekend,
+        "formatted_time": now.strftime("%I:%M %p"),
+        "formatted_date": now.strftime("%B %d, %Y")
+    }
+
+# Load all systems at startup
 user_profile = load_user_profile()
 memory_bank = load_memory_bank()
+routines = load_routines()
+patterns = load_patterns()
 
 conversation_history = load_history()
 load_reminders()
@@ -514,6 +756,79 @@ TOOLS = [
                 "query": {"type": "string", "description": "What to forget - will match against stored facts"}
             },
             "required": ["query"]
+        }
+    },
+    # ==== ROUTINES & AUTOMATION ====
+    {
+        "name": "run_routine",
+        "description": "Run a saved routine/macro. Routines execute multiple actions in sequence. Built-in routines: 'gaming_mode', 'work_mode', 'night_mode'. User can say things like 'start gaming mode' or 'activate work mode'.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "routine_name": {"type": "string", "description": "Name of the routine to run (e.g., 'gaming_mode', 'work_mode')"}
+            },
+            "required": ["routine_name"]
+        }
+    },
+    {
+        "name": "create_routine",
+        "description": "Create a new custom routine. A routine is a sequence of actions that run together.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "description": "Name for the routine (e.g., 'morning_routine', 'streaming_mode')"},
+                "description": {"type": "string", "description": "What the routine does"},
+                "actions": {"type": "string", "description": "JSON array of actions. Each action: {\"tool\": \"tool_name\", \"params\": {...}}"}
+            },
+            "required": ["name", "description", "actions"]
+        }
+    },
+    {
+        "name": "list_routines",
+        "description": "List all available routines.",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
+    },
+    {
+        "name": "delete_routine",
+        "description": "Delete a custom routine.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "routine_name": {"type": "string", "description": "Name of the routine to delete"}
+            },
+            "required": ["routine_name"]
+        }
+    },
+    # ==== CONTEXT AWARENESS ====
+    {
+        "name": "get_active_window",
+        "description": "Get information about the currently active/focused window on the computer.",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
+    },
+    {
+        "name": "get_usage_patterns",
+        "description": "Get learned patterns about user's behavior - most used apps, active hours, common commands.",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
+    },
+    {
+        "name": "suggest_routine",
+        "description": "Suggest a routine based on current context (time, patterns, active window).",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+            "required": []
         }
     },
 ]
@@ -1182,6 +1497,169 @@ def execute_tool(tool_name, tool_input):
             except Exception as e:
                 return f"Forget error: {str(e)}"
 
+        # ==== ROUTINES & AUTOMATION ====
+        elif tool_name == "run_routine":
+            routine_name = tool_input.get("routine_name", "").lower().replace(" ", "_")
+
+            try:
+                routines = load_routines()
+
+                if routine_name not in routines:
+                    available = ", ".join(routines.keys())
+                    return f"Routine '{routine_name}' not found. Available: {available}"
+
+                routine = routines[routine_name]
+                results = []
+
+                for action in routine.get('actions', []):
+                    tool = action.get('tool')
+                    params = action.get('params', {})
+                    result = execute_tool(tool, params)
+                    results.append(f"{tool}: {result}")
+
+                    # Track pattern
+                    track_pattern("command", f"routine:{routine_name}")
+
+                return f"Executed {routine['name']}. " + " | ".join(results)
+            except Exception as e:
+                return f"Routine error: {str(e)}"
+
+        elif tool_name == "create_routine":
+            name = tool_input.get("name", "").lower().replace(" ", "_")
+            description = tool_input.get("description", "")
+            actions_str = tool_input.get("actions", "[]")
+
+            try:
+                actions = json.loads(actions_str)
+                routines = load_routines()
+
+                routines[name] = {
+                    "name": name.replace("_", " ").title(),
+                    "description": description,
+                    "actions": actions,
+                    "created": datetime.now().isoformat()
+                }
+
+                save_routines(routines)
+                return f"Created routine '{name}' with {len(actions)} actions."
+            except json.JSONDecodeError:
+                return "Invalid actions format. Must be valid JSON array."
+            except Exception as e:
+                return f"Create routine error: {str(e)}"
+
+        elif tool_name == "list_routines":
+            try:
+                routines = load_routines()
+                if not routines:
+                    return "No routines configured."
+
+                lines = []
+                for key, routine in routines.items():
+                    action_count = len(routine.get('actions', []))
+                    lines.append(f"- {key}: {routine.get('description', 'No description')} ({action_count} actions)")
+
+                return "Available routines:\n" + "\n".join(lines)
+            except Exception as e:
+                return f"List routines error: {str(e)}"
+
+        elif tool_name == "delete_routine":
+            routine_name = tool_input.get("routine_name", "").lower().replace(" ", "_")
+
+            try:
+                routines = load_routines()
+
+                if routine_name not in routines:
+                    return f"Routine '{routine_name}' not found."
+
+                # Don't allow deleting default routines
+                if routine_name in DEFAULT_ROUTINES:
+                    return f"Can't delete built-in routine '{routine_name}'."
+
+                del routines[routine_name]
+                save_routines(routines)
+                return f"Deleted routine '{routine_name}'."
+            except Exception as e:
+                return f"Delete routine error: {str(e)}"
+
+        # ==== CONTEXT AWARENESS ====
+        elif tool_name == "get_active_window":
+            try:
+                window = get_active_window()
+                track_pattern("app_usage", window.split(" - ")[0] if " - " in window else window)
+                return f"Active window: {window}"
+            except Exception as e:
+                return f"Window detection error: {str(e)}"
+
+        elif tool_name == "get_usage_patterns":
+            try:
+                patterns = load_patterns()
+                lines = []
+
+                # Most used apps
+                if patterns.get('app_usage'):
+                    sorted_apps = sorted(patterns['app_usage'].items(),
+                                        key=lambda x: x[1].get('count', 0), reverse=True)[:5]
+                    if sorted_apps:
+                        lines.append("Most used apps: " + ", ".join([f"{app[0]} ({app[1]['count']}x)" for app in sorted_apps]))
+
+                # Most common commands
+                if patterns.get('command_frequency'):
+                    sorted_cmds = sorted(patterns['command_frequency'].items(),
+                                        key=lambda x: x[1], reverse=True)[:5]
+                    if sorted_cmds:
+                        lines.append("Common commands: " + ", ".join([f"{cmd[0]} ({cmd[1]}x)" for cmd in sorted_cmds]))
+
+                # Active hours
+                if patterns.get('active_hours'):
+                    sorted_hours = sorted(patterns['active_hours'].items(),
+                                         key=lambda x: int(x[1]), reverse=True)[:3]
+                    if sorted_hours:
+                        hour_strs = []
+                        for h, count in sorted_hours:
+                            hour_int = int(h)
+                            ampm = "AM" if hour_int < 12 else "PM"
+                            display_hour = hour_int if hour_int <= 12 else hour_int - 12
+                            if display_hour == 0:
+                                display_hour = 12
+                            hour_strs.append(f"{display_hour}{ampm}")
+                        lines.append("Most active hours: " + ", ".join(hour_strs))
+
+                if lines:
+                    return "Usage patterns:\n" + "\n".join(lines)
+                else:
+                    return "Not enough usage data yet. Keep using me and I'll learn your patterns!"
+            except Exception as e:
+                return f"Patterns error: {str(e)}"
+
+        elif tool_name == "suggest_routine":
+            try:
+                time_ctx = get_time_context()
+                patterns = load_patterns()
+                suggestions = []
+
+                # Time-based suggestions
+                hour = time_ctx['hour']
+                if 6 <= hour < 9:
+                    suggestions.append("It's morning - want me to run 'work_mode' to get set up?")
+                elif 17 <= hour < 20:
+                    suggestions.append("Evening time - 'gaming_mode' might be good?")
+                elif hour >= 22 or hour < 5:
+                    suggestions.append("Getting late - want me to run 'night_mode'?")
+
+                # Pattern-based suggestions
+                if patterns.get('app_usage'):
+                    hour_str = str(hour)
+                    for app, data in patterns['app_usage'].items():
+                        if hour_str in data.get('hours', {}) and data['hours'][hour_str] > 3:
+                            suggestions.append(f"You often use {app} around this time.")
+
+                if suggestions:
+                    return " ".join(suggestions)
+                else:
+                    return "No specific suggestions right now. What would you like to do?"
+            except Exception as e:
+                return f"Suggestion error: {str(e)}"
+
         return "Unknown tool"
     except Exception as e:
         return f"Error: {str(e)}"
@@ -1234,6 +1712,17 @@ MEMORY TOOLS (USE PROACTIVELY):
 - list_memories: See all stored memories
 - forget: Remove a memory if asked
 
+ROUTINES & AUTOMATION:
+- run_routine: Execute a saved routine (gaming_mode, work_mode, night_mode, or custom)
+- create_routine: Create a new custom routine with multiple actions
+- list_routines: Show all available routines
+- delete_routine: Remove a custom routine
+
+CONTEXT AWARENESS:
+- get_active_window: See what app/window is currently focused
+- get_usage_patterns: View learned patterns about user behavior
+- suggest_routine: Get suggestions based on time and patterns
+
 MEMORY BEHAVIOR:
 - AUTOMATICALLY use remember_fact when user shares: name, birthday, preferences, likes/dislikes, work info, personal details
 - Reference memories naturally - show you know them ("Since you like X..." or "For your Y project...")
@@ -1252,9 +1741,19 @@ GUIDELINES:
 Remember: You're not just an assistant, you're F.R.I.D.A.I. - you KNOW this person and you remember everything. Act like it."""
 
 def get_system_prompt():
-    """Build the full system prompt with dynamic memory context."""
+    """Build the full system prompt with dynamic memory and time context."""
     memory_context = get_memory_context()
-    return SYSTEM_PROMPT_BASE + "\n\n" + memory_context
+    time_ctx = get_time_context()
+
+    # Build time context string
+    time_context = f"""
+CURRENT CONTEXT:
+- Time: {time_ctx['formatted_time']} ({time_ctx['time_period']})
+- Day: {time_ctx['day']}{' (Weekend!)' if time_ctx['is_weekend'] else ''}
+- Energy: {time_ctx['energy']}
+- Suggested greeting style: {time_ctx['greeting']}"""
+
+    return SYSTEM_PROMPT_BASE + "\n" + time_context + "\n\n" + memory_context
 
 # ==============================================================================
 # FLASK ROUTES
@@ -1541,6 +2040,38 @@ def check_reminders():
         'due': [{'message': r['message'], 'time': r['time']} for r in due_reminders],
         'count': len(due_reminders)
     })
+
+@app.route('/check_alerts', methods=['GET'])
+def check_alerts():
+    """Check for proactive system alerts. Frontend should poll this."""
+    # Run system checks
+    check_system_alerts()
+
+    # Get pending alerts
+    alerts = get_pending_alerts()
+
+    return jsonify({
+        'alerts': alerts,
+        'count': len(alerts)
+    })
+
+@app.route('/get_context', methods=['GET'])
+def get_context():
+    """Get current context info (time, active window, suggestions)."""
+    try:
+        time_ctx = get_time_context()
+        window = get_active_window()
+
+        # Track activity
+        track_pattern("active", "ping")
+
+        return jsonify({
+            'time': time_ctx,
+            'active_window': window,
+            'status': 'ok'
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 # PWA routes
 @app.route('/manifest.json')
