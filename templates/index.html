@@ -379,9 +379,193 @@
         body.sleep-mode .record-btn {
             background: linear-gradient(135deg, #333 0%, #555 100%);
         }
+
+        /* ============================================
+           NEW UI COMPONENTS
+           ============================================ */
+
+        /* Alert Banner */
+        .alert-banner {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%);
+            color: white;
+            padding: 12px 20px;
+            text-align: center;
+            font-weight: 500;
+            transform: translateY(-100%);
+            transition: transform 0.3s ease;
+            z-index: 1000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .alert-banner.show {
+            transform: translateY(0);
+        }
+
+        .alert-banner .alert-text {
+            flex: 1;
+        }
+
+        .alert-banner .alert-close {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        /* Context Indicator */
+        .context-indicator {
+            background: rgba(0, 217, 255, 0.1);
+            border: 1px solid rgba(0, 217, 255, 0.3);
+            border-radius: 12px;
+            padding: 8px 16px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85em;
+        }
+
+        .context-indicator .greeting {
+            color: #00ff88;
+            font-weight: 500;
+        }
+
+        .context-indicator .time-info {
+            color: #888;
+        }
+
+        .context-indicator .reminder-badge {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: bold;
+            display: none;
+        }
+
+        .context-indicator .reminder-badge.has-reminders {
+            display: inline-block;
+        }
+
+        /* Status Dashboard */
+        .status-dashboard {
+            display: flex;
+            justify-content: space-around;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            margin-bottom: 10px;
+        }
+
+        .status-item {
+            text-align: center;
+            flex: 1;
+        }
+
+        .status-item .label {
+            font-size: 0.7em;
+            color: #888;
+            text-transform: uppercase;
+        }
+
+        .status-item .value {
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #00ff88;
+        }
+
+        .status-item .value.warning {
+            color: #ffc107;
+        }
+
+        .status-item .value.danger {
+            color: #ff4b2b;
+        }
+
+        /* Quick Action Bar */
+        .quick-actions {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+
+        .quick-action-btn {
+            padding: 10px 16px;
+            border-radius: 20px;
+            border: 1px solid rgba(0, 217, 255, 0.3);
+            background: rgba(0, 217, 255, 0.1);
+            color: white;
+            font-size: 0.85em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .quick-action-btn:hover, .quick-action-btn:active {
+            background: rgba(0, 217, 255, 0.3);
+            transform: scale(1.02);
+        }
+
+        .quick-action-btn .icon {
+            font-size: 1.1em;
+        }
+
+        .quick-action-btn.gaming {
+            border-color: rgba(102, 126, 234, 0.5);
+            background: rgba(102, 126, 234, 0.2);
+        }
+
+        .quick-action-btn.work {
+            border-color: rgba(0, 255, 136, 0.5);
+            background: rgba(0, 255, 136, 0.1);
+        }
+
+        .quick-action-btn.night {
+            border-color: rgba(118, 75, 162, 0.5);
+            background: rgba(118, 75, 162, 0.2);
+        }
+
+        /* Responsive adjustments for new elements */
+        @media (max-width: 480px) {
+            .status-dashboard {
+                padding: 8px;
+            }
+            .status-item .value {
+                font-size: 0.95em;
+            }
+            .quick-action-btn {
+                padding: 8px 12px;
+                font-size: 0.8em;
+            }
+            .context-indicator {
+                flex-wrap: wrap;
+                gap: 5px;
+            }
+        }
     </style>
 </head>
 <body>
+    <!-- Alert Banner (hidden by default) -->
+    <div class="alert-banner" id="alertBanner">
+        <span class="alert-text" id="alertText"></span>
+        <button class="alert-close" onclick="dismissAlert()">×</button>
+    </div>
+
     <div class="container">
         <header>
             <h1>F.R.I.D.A.I.</h1>
@@ -390,6 +574,42 @@
                 <span>Always Listening</span>
             </div>
         </header>
+
+        <!-- Context Indicator -->
+        <div class="context-indicator" id="contextIndicator">
+            <span class="greeting" id="contextGreeting">Good evening, Boss</span>
+            <span class="time-info" id="contextTime">Loading...</span>
+            <span class="reminder-badge" id="reminderBadge">0 reminders</span>
+        </div>
+
+        <!-- Status Dashboard -->
+        <div class="status-dashboard" id="statusDashboard">
+            <div class="status-item">
+                <div class="label">CPU</div>
+                <div class="value" id="cpuValue">--%</div>
+            </div>
+            <div class="status-item">
+                <div class="label">RAM</div>
+                <div class="value" id="ramValue">--%</div>
+            </div>
+            <div class="status-item">
+                <div class="label">Battery</div>
+                <div class="value" id="batteryValue">--%</div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="quick-actions" id="quickActions">
+            <button class="quick-action-btn gaming" onclick="runRoutine('gaming_mode')">
+                <span class="icon">🎮</span> Gaming
+            </button>
+            <button class="quick-action-btn work" onclick="runRoutine('work_mode')">
+                <span class="icon">💼</span> Work
+            </button>
+            <button class="quick-action-btn night" onclick="runRoutine('night_mode')">
+                <span class="icon">🌙</span> Night
+            </button>
+        </div>
 
         <div class="chat-container" id="chat">
             <div class="message assistant" id="greeting-msg">
@@ -1239,6 +1459,265 @@
         if ('wakeLock' in navigator && alwaysListen) {
             navigator.wakeLock.request('screen').catch(e => console.log('Wake lock not available'));
         }
+
+        // ============================================
+        // NEW UI FUNCTIONALITY
+        // ============================================
+
+        // Run a routine via quick action buttons
+        async function runRoutine(routineName) {
+            try {
+                setStatus(`Running ${routineName}...`);
+                const res = await fetch('/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: `run routine ${routineName}` })
+                });
+                const data = await res.json();
+
+                if (data.response) {
+                    addMessage(`Run ${routineName}`, 'user');
+                    addMessage(data.response, 'assistant');
+                    if (autoSpeak) {
+                        await speakText(data.response);
+                    }
+                }
+                setStatus('Ready');
+            } catch (e) {
+                console.error('Routine error:', e);
+                setStatus('Error running routine');
+            }
+        }
+
+        // Alert banner functions
+        let alertQueue = [];
+
+        function showAlert(message) {
+            const banner = document.getElementById('alertBanner');
+            const text = document.getElementById('alertText');
+            text.textContent = message;
+            banner.classList.add('show');
+
+            // Auto-dismiss after 10 seconds
+            setTimeout(() => {
+                dismissAlert();
+            }, 10000);
+        }
+
+        function dismissAlert() {
+            const banner = document.getElementById('alertBanner');
+            banner.classList.remove('show');
+
+            // Show next alert in queue if any
+            setTimeout(() => {
+                if (alertQueue.length > 0) {
+                    showAlert(alertQueue.shift());
+                }
+            }, 500);
+        }
+
+        // Check for alerts periodically
+        async function checkAlerts() {
+            try {
+                const res = await fetch('/check_alerts');
+                const data = await res.json();
+
+                if (data.alerts && data.alerts.length > 0) {
+                    data.alerts.forEach(alert => {
+                        if (document.getElementById('alertBanner').classList.contains('show')) {
+                            alertQueue.push(alert.message);
+                        } else {
+                            showAlert(alert.message);
+                        }
+                    });
+                }
+            } catch (e) {
+                // Silently fail
+            }
+        }
+
+        // Check for reminders and update badge
+        async function checkReminders() {
+            try {
+                const res = await fetch('/check_reminders');
+                const data = await res.json();
+
+                const badge = document.getElementById('reminderBadge');
+
+                // Handle due reminders
+                if (data.due && data.due.length > 0) {
+                    data.due.forEach(r => {
+                        showAlert(`⏰ Reminder: ${r.message}`);
+                        if (autoSpeak) {
+                            speakText(`Reminder: ${r.message}`);
+                        }
+                    });
+                }
+
+                // Update badge (we need to get count of remaining reminders)
+                // For now, hide badge if no due reminders shown
+                badge.classList.remove('has-reminders');
+            } catch (e) {
+                // Silently fail
+            }
+        }
+
+        // Update system stats
+        async function updateSystemStats() {
+            try {
+                const res = await fetch('/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: 'system_stats_silent', silent: true })
+                });
+
+                // Use a simpler approach - call the system_stats tool directly
+                const statsRes = await fetch('/get_context');
+                const data = await statsRes.json();
+
+                // For now, show placeholder - real stats would need a dedicated endpoint
+                // We'll update this with actual stats from the get_context endpoint
+
+            } catch (e) {
+                // Silently fail
+            }
+
+            // Also try to get battery from browser API
+            if ('getBattery' in navigator) {
+                try {
+                    const battery = await navigator.getBattery();
+                    const batteryEl = document.getElementById('batteryValue');
+                    const pct = Math.round(battery.level * 100);
+                    batteryEl.textContent = pct + '%';
+                    batteryEl.className = 'value' + (pct < 20 ? ' danger' : pct < 40 ? ' warning' : '');
+                } catch (e) {}
+            }
+        }
+
+        // Update context indicator
+        async function updateContext() {
+            try {
+                const res = await fetch('/get_context');
+                const data = await res.json();
+
+                if (data.time) {
+                    const profile = await getProfile();
+                    const name = profile?.preferred_name || 'Boss';
+
+                    document.getElementById('contextGreeting').textContent =
+                        `${data.time.greeting}, ${name}`;
+                    document.getElementById('contextTime').textContent =
+                        `${data.time.formatted_time} • ${data.time.day}`;
+                }
+            } catch (e) {
+                // Use fallback
+                const hour = new Date().getHours();
+                let greeting = 'Hello';
+                if (hour < 12) greeting = 'Good morning';
+                else if (hour < 17) greeting = 'Good afternoon';
+                else if (hour < 21) greeting = 'Good evening';
+                else greeting = 'Hey night owl';
+
+                document.getElementById('contextGreeting').textContent = `${greeting}, Boss`;
+                document.getElementById('contextTime').textContent =
+                    new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            }
+        }
+
+        // Get user profile (cached)
+        let cachedProfile = null;
+        async function getProfile() {
+            if (cachedProfile) return cachedProfile;
+            try {
+                // This would need a dedicated endpoint - for now return null
+                return null;
+            } catch (e) {
+                return null;
+            }
+        }
+
+        // Fetch system stats from dedicated endpoint
+        async function fetchSystemStats() {
+            try {
+                const cpuEl = document.getElementById('cpuValue');
+                const ramEl = document.getElementById('ramValue');
+                const batteryEl = document.getElementById('batteryValue');
+
+                const res = await fetch('/system_stats');
+                const data = await res.json();
+
+                if (data.cpu !== null && data.cpu !== undefined) {
+                    cpuEl.textContent = data.cpu + '%';
+                    cpuEl.className = 'value' + (data.cpu > 90 ? ' danger' : data.cpu > 70 ? ' warning' : '');
+                }
+                if (data.ram !== null && data.ram !== undefined) {
+                    ramEl.textContent = data.ram + '%';
+                    ramEl.className = 'value' + (data.ram > 90 ? ' danger' : data.ram > 70 ? ' warning' : '');
+                }
+                if (data.battery !== null && data.battery !== undefined) {
+                    batteryEl.textContent = data.battery + '%';
+                    batteryEl.className = 'value' + (data.battery < 20 ? ' danger' : data.battery < 40 ? ' warning' : '');
+                } else {
+                    // Try browser API for battery
+                    if ('getBattery' in navigator) {
+                        try {
+                            const battery = await navigator.getBattery();
+                            const pct = Math.round(battery.level * 100);
+                            batteryEl.textContent = pct + '%';
+                            batteryEl.className = 'value' + (pct < 20 ? ' danger' : pct < 40 ? ' warning' : '');
+                        } catch (e) {
+                            batteryEl.textContent = 'N/A';
+                        }
+                    } else {
+                        batteryEl.textContent = 'N/A';
+                    }
+                }
+            } catch (e) {
+                console.log('Stats fetch error:', e);
+            }
+        }
+
+        // Fetch reminder count
+        async function fetchReminderCount() {
+            try {
+                const res = await fetch('/get_reminders_count');
+                const data = await res.json();
+                const badge = document.getElementById('reminderBadge');
+
+                if (data.count > 0) {
+                    badge.textContent = data.count + ' reminder' + (data.count > 1 ? 's' : '');
+                    badge.classList.add('has-reminders');
+                } else {
+                    badge.classList.remove('has-reminders');
+                }
+            } catch (e) {
+                // Silently fail
+            }
+        }
+
+        // Start periodic updates
+        function startPeriodicUpdates() {
+            // Update context every minute
+            updateContext();
+            setInterval(updateContext, 60000);
+
+            // Check alerts every 30 seconds
+            setInterval(checkAlerts, 30000);
+
+            // Check reminders every 30 seconds
+            setInterval(checkReminders, 30000);
+
+            // Update reminder count every 30 seconds
+            fetchReminderCount();
+            setInterval(fetchReminderCount, 30000);
+
+            // Update system stats every 30 seconds
+            fetchSystemStats();
+            setInterval(fetchSystemStats, 30000);
+        }
+
+        // Start updates when page loads
+        setTimeout(startPeriodicUpdates, 2000);
     </script>
 </body>
 </html>

@@ -2073,6 +2073,54 @@ def get_context():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/system_stats', methods=['GET'])
+def get_system_stats_endpoint():
+    """Get system stats for the dashboard."""
+    try:
+        stats = {}
+
+        # CPU
+        try:
+            cpu_cmd = 'wmic cpu get loadpercentage /value'
+            cpu_result = subprocess.run(cpu_cmd, shell=True, capture_output=True, text=True, timeout=5)
+            cpu_match = re.search(r'LoadPercentage=(\d+)', cpu_result.stdout)
+            if cpu_match:
+                stats['cpu'] = int(cpu_match.group(1))
+        except:
+            stats['cpu'] = None
+
+        # Memory
+        try:
+            mem_cmd = 'wmic OS get FreePhysicalMemory,TotalVisibleMemorySize /value'
+            mem_result = subprocess.run(mem_cmd, shell=True, capture_output=True, text=True, timeout=5)
+            free_match = re.search(r'FreePhysicalMemory=(\d+)', mem_result.stdout)
+            total_match = re.search(r'TotalVisibleMemorySize=(\d+)', mem_result.stdout)
+            if free_match and total_match:
+                free_mb = int(free_match.group(1)) / 1024
+                total_mb = int(total_match.group(1)) / 1024
+                stats['ram'] = int((1 - free_mb / total_mb) * 100)
+        except:
+            stats['ram'] = None
+
+        # Battery
+        try:
+            bat_cmd = 'wmic path Win32_Battery get EstimatedChargeRemaining /value'
+            bat_result = subprocess.run(bat_cmd, shell=True, capture_output=True, text=True, timeout=5)
+            bat_match = re.search(r'EstimatedChargeRemaining=(\d+)', bat_result.stdout)
+            if bat_match:
+                stats['battery'] = int(bat_match.group(1))
+        except:
+            stats['battery'] = None
+
+        return jsonify(stats)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/get_reminders_count', methods=['GET'])
+def get_reminders_count():
+    """Get count of active reminders."""
+    return jsonify({'count': len(active_reminders)})
+
 # PWA routes
 @app.route('/manifest.json')
 def manifest():
