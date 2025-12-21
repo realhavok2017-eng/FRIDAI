@@ -3654,6 +3654,34 @@ def get_proactive_insights_endpoint():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/get_calendar', methods=['GET'])
+def get_calendar_endpoint():
+    """Get calendar events for the UI."""
+    try:
+        events = get_calendar_events(days_ahead=7)
+        # Format for display
+        formatted = []
+        for event in events[:10]:  # Limit to 10 events
+            formatted.append({
+                'title': event.get('title', 'Untitled'),
+                'date': event.get('date', ''),
+                'time': event.get('time', ''),
+                'description': event.get('description', '')
+            })
+        return jsonify({'events': formatted})
+    except Exception as e:
+        return jsonify({'events': [], 'error': str(e)})
+
+@app.route('/get_active_tasks', methods=['GET'])
+def get_active_tasks_endpoint():
+    """Get active multi-step tasks for the UI."""
+    try:
+        load_tasks()  # Ensure tasks are loaded
+        active = list_active_tasks()
+        return jsonify({'tasks': active})
+    except Exception as e:
+        return jsonify({'tasks': [], 'error': str(e)})
+
 # PWA routes
 @app.route('/manifest.json')
 def manifest():
