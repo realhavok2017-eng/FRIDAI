@@ -78,7 +78,7 @@ def load_history():
 
 def save_history(history):
     with open(HISTORY_FILE, 'w') as f:
-        json.dump(history[-50:], f, indent=2)
+        json.dump(history[-200:], f, indent=2)  # Keep last 200 messages for better memory
 
 def load_reminders():
     global active_reminders
@@ -286,6 +286,44 @@ TOOLS = [
                 "topic": {"type": "string", "description": "Optional topic to filter news (e.g., 'technology', 'sports')"}
             },
             "required": []
+        }
+    },
+    # Spotify Control
+    {
+        "name": "spotify_control",
+        "description": "Control Spotify playback - play, pause, next track, previous track, or search and play a song/artist/playlist.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "action": {"type": "string", "description": "Action: 'play', 'pause', 'next', 'previous', 'volume up', 'volume down'"},
+                "search": {"type": "string", "description": "Optional: song, artist, or playlist name to search and play"}
+            },
+            "required": ["action"]
+        }
+    },
+    # Screenshot tool
+    {
+        "name": "take_screenshot",
+        "description": "Take a screenshot of the current screen and save it.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "filename": {"type": "string", "description": "Optional filename (default: screenshot_timestamp.png)"}
+            },
+            "required": []
+        }
+    },
+    # Clipboard tool
+    {
+        "name": "clipboard",
+        "description": "Read from or write to the system clipboard.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "action": {"type": "string", "description": "'read' to get clipboard contents, 'write' to set clipboard"},
+                "text": {"type": "string", "description": "Text to write to clipboard (only for 'write' action)"}
+            },
+            "required": ["action"]
         }
     },
 ]
@@ -694,6 +732,91 @@ def execute_tool(tool_name, tool_input):
             except Exception as e:
                 return f"Couldn't fetch news: {str(e)}"
 
+        # ==== SPOTIFY CONTROL ====
+        elif tool_name == "spotify_control":
+            action = tool_input.get("action", "").lower()
+            search = tool_input.get("search", "")
+
+            try:
+                # Use keyboard simulation for Spotify control (works when Spotify is open)
+                if action == "play" and search:
+                    # Open Spotify with search
+                    search_encoded = search.replace(" ", "%20")
+                    subprocess.Popen(f'start spotify:search:{search_encoded}', shell=True)
+                    return f"Searching Spotify for '{search}'..."
+                elif action == "play":
+                    # Play/resume - media key
+                    subprocess.run('powershell -Command "(New-Object -ComObject WScript.Shell).SendKeys([char]179)"', shell=True, capture_output=True)
+                    return "Playing."
+                elif action == "pause":
+                    subprocess.run('powershell -Command "(New-Object -ComObject WScript.Shell).SendKeys([char]179)"', shell=True, capture_output=True)
+                    return "Paused."
+                elif action == "next":
+                    subprocess.run('powershell -Command "(New-Object -ComObject WScript.Shell).SendKeys([char]176)"', shell=True, capture_output=True)
+                    return "Skipping to next track."
+                elif action == "previous":
+                    subprocess.run('powershell -Command "(New-Object -ComObject WScript.Shell).SendKeys([char]177)"', shell=True, capture_output=True)
+                    return "Going to previous track."
+                elif "volume" in action:
+                    if "up" in action:
+                        subprocess.run('powershell -Command "(New-Object -ComObject WScript.Shell).SendKeys([char]175)"', shell=True, capture_output=True)
+                        return "Volume up."
+                    else:
+                        subprocess.run('powershell -Command "(New-Object -ComObject WScript.Shell).SendKeys([char]174)"', shell=True, capture_output=True)
+                        return "Volume down."
+                else:
+                    return f"Unknown Spotify action: {action}. Use play, pause, next, previous, or volume up/down."
+            except Exception as e:
+                return f"Spotify control error: {str(e)}"
+
+        # ==== SCREENSHOT ====
+        elif tool_name == "take_screenshot":
+            filename = tool_input.get("filename", "")
+            try:
+                if not filename:
+                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                    filename = f"screenshot_{timestamp}.png"
+
+                # Save to user's Pictures folder
+                save_path = os.path.join(WORKSPACE, "Pictures", filename)
+
+                # Use PowerShell to take screenshot
+                ps_script = f'''
+                Add-Type -AssemblyName System.Windows.Forms
+                $screen = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+                $bitmap = New-Object System.Drawing.Bitmap($screen.Width, $screen.Height)
+                $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
+                $graphics.CopyFromScreen($screen.Location, [System.Drawing.Point]::Empty, $screen.Size)
+                $bitmap.Save("{save_path}")
+                '''
+                subprocess.run(['powershell', '-Command', ps_script], capture_output=True)
+                return f"Screenshot saved to {save_path}"
+            except Exception as e:
+                return f"Screenshot error: {str(e)}"
+
+        # ==== CLIPBOARD ====
+        elif tool_name == "clipboard":
+            action = tool_input.get("action", "").lower()
+            text = tool_input.get("text", "")
+
+            try:
+                if action == "read":
+                    result = subprocess.run('powershell -Command "Get-Clipboard"', shell=True, capture_output=True, text=True)
+                    content = result.stdout.strip()
+                    if content:
+                        return f"Clipboard contents: {content[:500]}"
+                    else:
+                        return "Clipboard is empty."
+                elif action == "write" and text:
+                    # Escape quotes for PowerShell
+                    escaped_text = text.replace('"', '`"').replace("'", "''")
+                    subprocess.run(f'powershell -Command "Set-Clipboard -Value \'{escaped_text}\'"', shell=True, capture_output=True)
+                    return f"Copied to clipboard: {text[:100]}..."
+                else:
+                    return "Specify 'read' or 'write' action. For write, include 'text' parameter."
+            except Exception as e:
+                return f"Clipboard error: {str(e)}"
+
         return "Unknown tool"
     except Exception as e:
         return f"Error: {str(e)}"
@@ -733,6 +856,9 @@ AVAILABLE TOOLS:
 - set_reminder: Set timers and reminders
 - list_reminders / cancel_reminder: Manage reminders
 - get_news: Latest headlines
+- spotify_control: Control Spotify (play, pause, next, previous, search for music)
+- take_screenshot: Capture the screen
+- clipboard: Read from or write to clipboard
 
 CONTEXT:
 - User's name: Boss (or sir, if you prefer the Stark vibe)
@@ -1009,6 +1135,31 @@ def save_settings():
 @app.route('/get_settings', methods=['GET'])
 def get_settings():
     return jsonify(load_user_settings())
+
+@app.route('/check_reminders', methods=['GET'])
+def check_reminders():
+    """Check for due reminders and return them. Frontend should poll this."""
+    global active_reminders
+    now = datetime.now()
+    due_reminders = []
+    remaining = []
+
+    for r in active_reminders:
+        remind_time = datetime.fromisoformat(r['time'])
+        if remind_time <= now:
+            due_reminders.append(r)
+        else:
+            remaining.append(r)
+
+    # Remove due reminders from active list
+    if due_reminders:
+        active_reminders = remaining
+        save_reminders()
+
+    return jsonify({
+        'due': [{'message': r['message'], 'time': r['time']} for r in due_reminders],
+        'count': len(due_reminders)
+    })
 
 # PWA routes
 @app.route('/manifest.json')
