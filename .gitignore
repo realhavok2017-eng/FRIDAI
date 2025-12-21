@@ -1,3 +1,6 @@
+# Binaries (large files)
+*.exe
+
 # Python
 __pycache__/
 *.py[cod]
@@ -16,6 +19,7 @@ server.log
 conversation_history.json
 user_settings.json
 smart_home_config.json
+reminders.json
 
 # Environment
 .env
