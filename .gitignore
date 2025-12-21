@@ -25,6 +25,9 @@ memory_bank.json
 routines.json
 patterns.json
 active_tasks.json
+proactive_data.json
+calendar_events.json
+voice_settings.json
 
 # Environment
 .env

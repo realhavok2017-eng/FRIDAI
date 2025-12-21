@@ -125,6 +125,7 @@ CORS(app)
 ELEVENLABS_API_KEY = os.environ.get("ELEVENLABS_API_KEY", "")
 DEEPGRAM_API_KEY = os.environ.get("DEEPGRAM_API_KEY", "")
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
+SMARTTHINGS_API_KEY = os.environ.get("SMARTTHINGS_API_KEY", "")
 
 HISTORY_FILE = os.path.join(APP_DIR, "conversation_history.json")
 SETTINGS_FILE = os.path.join(APP_DIR, "user_settings.json")
@@ -139,8 +140,59 @@ print("Loading Whisper model...")
 whisper_model = whisper.load_model("base")
 print("Whisper model loaded!")
 
-# Voice ID
+# Voice ID and Settings
 VOICE_ID = "21m00Tcm4TlvDq8ikWAM"
+VOICE_SETTINGS_FILE = os.path.join(APP_DIR, "voice_settings.json")
+
+# Default voice settings for ElevenLabs
+DEFAULT_VOICE_SETTINGS = {
+    "voice_id": "21m00Tcm4TlvDq8ikWAM",  # Rachel (default)
+    "model_id": "eleven_turbo_v2_5",
+    "stability": 0.5,
+    "similarity_boost": 0.75,
+    "style": 0.0,
+    "use_speaker_boost": True
+}
+
+# Available ElevenLabs voices (common ones)
+AVAILABLE_VOICES = {
+    "rachel": {"id": "21m00Tcm4TlvDq8ikWAM", "description": "Calm, professional female (default FRIDAY)"},
+    "domi": {"id": "AZnzlk1XvdvUeBnXmlld", "description": "Strong, confident female"},
+    "bella": {"id": "EXAVITQu4vr4xnSDxMaL", "description": "Soft, friendly female"},
+    "elli": {"id": "MF3mGyEYCl7XYWbV9V6O", "description": "Young, energetic female"},
+    "josh": {"id": "TxGEqnHWrfWFTfGW9XjX", "description": "Deep, authoritative male"},
+    "arnold": {"id": "VR6AewLTigWG4xSOukaG", "description": "Strong, commanding male"},
+    "adam": {"id": "pNInz6obpgDQGcFmaJgB", "description": "Deep, warm male"},
+    "sam": {"id": "yoZ06aMxZJJ28mfd3POQ", "description": "Raspy, casual male"}
+}
+
+def load_voice_settings():
+    """Load voice settings from file."""
+    if os.path.exists(VOICE_SETTINGS_FILE):
+        try:
+            with open(VOICE_SETTINGS_FILE, 'r') as f:
+                settings = json.load(f)
+                # Merge with defaults
+                for key in DEFAULT_VOICE_SETTINGS:
+                    if key not in settings:
+                        settings[key] = DEFAULT_VOICE_SETTINGS[key]
+                return settings
+        except:
+            return DEFAULT_VOICE_SETTINGS.copy()
+    return DEFAULT_VOICE_SETTINGS.copy()
+
+def save_voice_settings(settings):
+    """Save voice settings to file."""
+    with open(VOICE_SETTINGS_FILE, 'w') as f:
+        json.dump(settings, f, indent=2)
+
+def get_current_voice_id():
+    """Get the current voice ID from settings."""
+    settings = load_voice_settings()
+    return settings.get("voice_id", VOICE_ID)
+
+# Load voice settings at startup
+voice_settings = load_voice_settings()
 
 # ==============================================================================
 # HELPER FUNCTIONS
@@ -702,6 +754,521 @@ def get_pending_alerts():
     pending_alerts = []
     return alerts
 
+# ==============================================================================
+# PROACTIVE ASSISTANCE SYSTEM
+# ==============================================================================
+PROACTIVE_FILE = os.path.join(APP_DIR, "proactive_data.json")
+
+# Proactive insights storage
+proactive_insights = {
+    "schedule_patterns": {},      # When user typically does things
+    "predicted_actions": [],       # What we think user might want
+    "last_proactive_check": None,
+    "daily_summary": {},
+    "weekly_patterns": {}
+}
+
+def load_proactive_data():
+    """Load proactive assistance data."""
+    global proactive_insights
+    if os.path.exists(PROACTIVE_FILE):
+        try:
+            with open(PROACTIVE_FILE, 'r') as f:
+                proactive_insights = json.load(f)
+        except:
+            pass
+    return proactive_insights
+
+def save_proactive_data():
+    """Save proactive assistance data."""
+    with open(PROACTIVE_FILE, 'w') as f:
+        json.dump(proactive_insights, f, indent=2)
+
+def learn_schedule_pattern(action_type, hour, day_of_week):
+    """Learn when user typically performs certain actions."""
+    global proactive_insights
+
+    key = f"{action_type}_{day_of_week}_{hour}"
+
+    if 'schedule_patterns' not in proactive_insights:
+        proactive_insights['schedule_patterns'] = {}
+
+    if key not in proactive_insights['schedule_patterns']:
+        proactive_insights['schedule_patterns'][key] = {
+            'action': action_type,
+            'hour': hour,
+            'day': day_of_week,
+            'count': 0,
+            'last_occurred': None
+        }
+
+    proactive_insights['schedule_patterns'][key]['count'] += 1
+    proactive_insights['schedule_patterns'][key]['last_occurred'] = datetime.now().isoformat()
+    save_proactive_data()
+
+def get_predicted_actions():
+    """Get predicted actions based on current time and patterns."""
+    predictions = []
+    now = datetime.now()
+    current_hour = now.hour
+    current_day = now.strftime("%A")
+
+    patterns = load_patterns()
+    load_proactive_data()
+
+    # Check schedule patterns for this time
+    for key, pattern in proactive_insights.get('schedule_patterns', {}).items():
+        if pattern['hour'] == current_hour and pattern['day'] == current_day:
+            if pattern['count'] >= 3:  # Must have happened at least 3 times
+                predictions.append({
+                    'action': pattern['action'],
+                    'confidence': min(pattern['count'] / 10, 1.0),  # Max 100% confidence
+                    'reason': f"You usually do this on {current_day}s around {current_hour}:00"
+                })
+
+    # Check app usage patterns
+    app_usage = patterns.get('app_usage', {})
+    hour_str = str(current_hour)
+
+    for app, data in app_usage.items():
+        if isinstance(data, dict):
+            hours = data.get('hours', {})
+            if hours.get(hour_str, 0) >= 5:  # Used at this hour 5+ times
+                predictions.append({
+                    'action': f"open_{app}",
+                    'confidence': min(hours[hour_str] / 20, 0.9),
+                    'reason': f"You often use {app} at this time"
+                })
+
+    # Sort by confidence
+    predictions.sort(key=lambda x: x['confidence'], reverse=True)
+    return predictions[:3]  # Return top 3 predictions
+
+def generate_proactive_insight():
+    """Generate a proactive insight based on current context."""
+    insights = []
+    now = datetime.now()
+    hour = now.hour
+    day = now.strftime("%A")
+
+    # Time-based insights
+    if hour == 8 and day not in ["Saturday", "Sunday"]:
+        insights.append({
+            'type': 'morning_routine',
+            'message': "Good morning! Want me to run your morning briefing?",
+            'action': 'morning_briefing',
+            'priority': 'medium'
+        })
+
+    if hour == 12:
+        insights.append({
+            'type': 'midday_check',
+            'message': "It's noon - want a quick status update?",
+            'action': 'system_stats',
+            'priority': 'low'
+        })
+
+    if hour == 22:
+        insights.append({
+            'type': 'evening_routine',
+            'message': "Getting late - should I switch to night mode?",
+            'action': 'run_routine',
+            'params': {'routine_name': 'night_mode'},
+            'priority': 'medium'
+        })
+
+    # Check for upcoming reminders
+    upcoming = get_upcoming_reminders(minutes=30)
+    if upcoming:
+        for reminder in upcoming[:2]:
+            insights.append({
+                'type': 'reminder_preview',
+                'message': f"Heads up: '{reminder['message']}' coming up in {reminder['minutes_until']} minutes",
+                'action': None,
+                'priority': 'high'
+            })
+
+    # Predictive actions
+    predictions = get_predicted_actions()
+    for pred in predictions:
+        if pred['confidence'] > 0.6:  # Only suggest high confidence predictions
+            insights.append({
+                'type': 'prediction',
+                'message': pred['reason'],
+                'action': pred['action'],
+                'priority': 'low'
+            })
+
+    # Sort by priority
+    priority_order = {'high': 0, 'medium': 1, 'low': 2}
+    insights.sort(key=lambda x: priority_order.get(x.get('priority', 'low'), 2))
+
+    return insights[:3]
+
+def get_upcoming_reminders(minutes=30):
+    """Get reminders coming up in the next N minutes."""
+    upcoming = []
+    now = datetime.now()
+
+    for reminder in active_reminders:
+        try:
+            remind_time = datetime.fromisoformat(reminder['time'])
+            diff = (remind_time - now).total_seconds() / 60
+
+            if 0 < diff <= minutes:
+                upcoming.append({
+                    'message': reminder['message'],
+                    'time': reminder['time'],
+                    'minutes_until': int(diff)
+                })
+        except:
+            pass
+
+    return sorted(upcoming, key=lambda x: x['minutes_until'])
+
+def track_user_action(action_type):
+    """Track user actions for schedule learning."""
+    now = datetime.now()
+    hour = now.hour
+    day = now.strftime("%A")
+    learn_schedule_pattern(action_type, hour, day)
+
+# Load proactive data at startup
+load_proactive_data()
+
+# ==============================================================================
+# SMARTTHINGS INTEGRATION
+# ==============================================================================
+SMARTTHINGS_API_URL = "https://api.smartthings.com/v1"
+smartthings_devices_cache = {}
+smartthings_cache_time = 0
+SMARTTHINGS_CACHE_DURATION = 300  # Cache for 5 minutes
+
+def smartthings_api_request(endpoint, method="GET", data=None):
+    """Make a request to the SmartThings API."""
+    if not SMARTTHINGS_API_KEY:
+        return None, "SmartThings API key not configured. Add SMARTTHINGS_API_KEY to your .env file."
+
+    headers = {
+        "Authorization": f"Bearer {SMARTTHINGS_API_KEY}",
+        "Content-Type": "application/json"
+    }
+
+    url = f"{SMARTTHINGS_API_URL}/{endpoint}"
+
+    try:
+        if method == "GET":
+            response = requests.get(url, headers=headers, timeout=10)
+        elif method == "POST":
+            response = requests.post(url, headers=headers, json=data, timeout=10)
+        else:
+            return None, f"Unsupported method: {method}"
+
+        if response.status_code == 200:
+            return response.json(), None
+        elif response.status_code == 401:
+            return None, "SmartThings authentication failed. Check your API key."
+        else:
+            return None, f"SmartThings API error: {response.status_code}"
+    except Exception as e:
+        return None, f"SmartThings connection error: {str(e)}"
+
+def get_smartthings_devices(force_refresh=False):
+    """Get list of SmartThings devices."""
+    global smartthings_devices_cache, smartthings_cache_time
+
+    current_time = time.time()
+
+    # Use cache if available and not expired
+    if not force_refresh and smartthings_devices_cache and (current_time - smartthings_cache_time) < SMARTTHINGS_CACHE_DURATION:
+        return smartthings_devices_cache, None
+
+    data, error = smartthings_api_request("devices")
+    if error:
+        return None, error
+
+    # Process and cache devices
+    devices = {}
+    for device in data.get("items", []):
+        device_id = device.get("deviceId")
+        device_name = device.get("label") or device.get("name", "Unknown")
+        device_type = device.get("deviceTypeName", "")
+
+        # Get capabilities
+        capabilities = []
+        for component in device.get("components", []):
+            for cap in component.get("capabilities", []):
+                capabilities.append(cap.get("id", ""))
+
+        devices[device_id] = {
+            "id": device_id,
+            "name": device_name,
+            "type": device_type,
+            "capabilities": capabilities,
+            "room": device.get("roomId", "")
+        }
+
+    smartthings_devices_cache = devices
+    smartthings_cache_time = current_time
+    return devices, None
+
+def find_smartthings_device(query):
+    """Find a device by name or type."""
+    devices, error = get_smartthings_devices()
+    if error:
+        return None, error
+
+    query_lower = query.lower()
+
+    # Exact match first
+    for device_id, device in devices.items():
+        if device["name"].lower() == query_lower:
+            return device, None
+
+    # Partial match
+    for device_id, device in devices.items():
+        if query_lower in device["name"].lower():
+            return device, None
+
+    # Type match (e.g., "lights", "switch")
+    type_keywords = {
+        "light": ["switch", "light", "bulb", "dimmer"],
+        "thermostat": ["thermostat", "temperature"],
+        "lock": ["lock"],
+        "sensor": ["sensor", "motion", "contact"],
+        "outlet": ["outlet", "plug"]
+    }
+
+    for device_id, device in devices.items():
+        device_type_lower = device["type"].lower()
+        for category, keywords in type_keywords.items():
+            if query_lower == category or query_lower in category:
+                if any(kw in device_type_lower for kw in keywords):
+                    return device, None
+
+    return None, f"Device '{query}' not found"
+
+def control_smartthings_device(device_id, capability, command, args=None):
+    """Send a command to a SmartThings device."""
+    endpoint = f"devices/{device_id}/commands"
+
+    command_data = {
+        "commands": [{
+            "component": "main",
+            "capability": capability,
+            "command": command
+        }]
+    }
+
+    if args:
+        command_data["commands"][0]["arguments"] = args
+
+    return smartthings_api_request(endpoint, method="POST", data=command_data)
+
+def smartthings_turn_on(device):
+    """Turn on a SmartThings device."""
+    if "switch" in device["capabilities"]:
+        return control_smartthings_device(device["id"], "switch", "on")
+    elif "switchLevel" in device["capabilities"]:
+        return control_smartthings_device(device["id"], "switchLevel", "setLevel", [100])
+    return None, "Device doesn't support on/off"
+
+def smartthings_turn_off(device):
+    """Turn off a SmartThings device."""
+    if "switch" in device["capabilities"]:
+        return control_smartthings_device(device["id"], "switch", "off")
+    elif "switchLevel" in device["capabilities"]:
+        return control_smartthings_device(device["id"], "switchLevel", "setLevel", [0])
+    return None, "Device doesn't support on/off"
+
+def smartthings_set_level(device, level):
+    """Set brightness/level of a SmartThings device."""
+    if "switchLevel" in device["capabilities"]:
+        return control_smartthings_device(device["id"], "switchLevel", "setLevel", [level])
+    return None, "Device doesn't support dimming"
+
+def smartthings_set_thermostat(device, temperature, mode=None):
+    """Set thermostat temperature."""
+    results = []
+
+    if mode:
+        mode_map = {
+            "heat": "heat",
+            "cool": "cool",
+            "auto": "auto",
+            "off": "off"
+        }
+        if mode.lower() in mode_map:
+            result, error = control_smartthings_device(
+                device["id"], "thermostatMode", "setThermostatMode", [mode_map[mode.lower()]]
+            )
+            if error:
+                results.append(f"Mode error: {error}")
+            else:
+                results.append(f"Mode set to {mode}")
+
+    # Set temperature based on mode
+    if "thermostatHeatingSetpoint" in device["capabilities"]:
+        result, error = control_smartthings_device(
+            device["id"], "thermostatHeatingSetpoint", "setHeatingSetpoint", [temperature]
+        )
+        if not error:
+            results.append(f"Heating set to {temperature}°")
+    elif "thermostatCoolingSetpoint" in device["capabilities"]:
+        result, error = control_smartthings_device(
+            device["id"], "thermostatCoolingSetpoint", "setCoolingSetpoint", [temperature]
+        )
+        if not error:
+            results.append(f"Cooling set to {temperature}°")
+
+    return results if results else None, "Couldn't set thermostat"
+
+def smartthings_lock(device, lock=True):
+    """Lock or unlock a SmartThings lock."""
+    if "lock" in device["capabilities"]:
+        command = "lock" if lock else "unlock"
+        return control_smartthings_device(device["id"], "lock", command)
+    return None, "Device is not a lock"
+
+# ==============================================================================
+# CALENDAR SYSTEM
+# ==============================================================================
+CALENDAR_FILE = os.path.join(APP_DIR, "calendar_events.json")
+
+def load_calendar():
+    """Load calendar events from file."""
+    if os.path.exists(CALENDAR_FILE):
+        try:
+            with open(CALENDAR_FILE, 'r') as f:
+                return json.load(f)
+        except:
+            return []
+    return []
+
+def save_calendar(events):
+    """Save calendar events to file."""
+    with open(CALENDAR_FILE, 'w') as f:
+        json.dump(events, f, indent=2)
+
+def add_calendar_event(title, date_str, time_str=None, description="", duration_minutes=60, recurring=None):
+    """Add a calendar event."""
+    events = load_calendar()
+
+    # Parse date
+    try:
+        if time_str:
+            event_datetime = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
+        else:
+            event_datetime = datetime.strptime(date_str, "%Y-%m-%d")
+            event_datetime = event_datetime.replace(hour=9, minute=0)  # Default to 9 AM
+    except ValueError:
+        # Try natural date parsing
+        try:
+            now = datetime.now()
+            date_lower = date_str.lower()
+
+            if date_lower == "today":
+                event_date = now.date()
+            elif date_lower == "tomorrow":
+                event_date = (now + timedelta(days=1)).date()
+            elif date_lower in ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]:
+                days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+                target_day = days.index(date_lower)
+                current_day = now.weekday()
+                days_ahead = (target_day - current_day) % 7
+                if days_ahead == 0:
+                    days_ahead = 7  # Next week
+                event_date = (now + timedelta(days=days_ahead)).date()
+            else:
+                return None, f"Couldn't parse date: {date_str}"
+
+            if time_str:
+                try:
+                    # Parse time like "3pm", "3:30pm", "15:00"
+                    time_str = time_str.lower().strip()
+                    if "pm" in time_str or "am" in time_str:
+                        time_str = time_str.replace("pm", " PM").replace("am", " AM")
+                        if ":" in time_str:
+                            parsed_time = datetime.strptime(time_str.strip(), "%I:%M %p").time()
+                        else:
+                            parsed_time = datetime.strptime(time_str.strip(), "%I %p").time()
+                    else:
+                        parsed_time = datetime.strptime(time_str, "%H:%M").time()
+                    event_datetime = datetime.combine(event_date, parsed_time)
+                except:
+                    event_datetime = datetime.combine(event_date, datetime.strptime("09:00", "%H:%M").time())
+            else:
+                event_datetime = datetime.combine(event_date, datetime.strptime("09:00", "%H:%M").time())
+        except Exception as e:
+            return None, f"Date parsing error: {str(e)}"
+
+    event = {
+        "id": f"evt_{int(time.time())}",
+        "title": title,
+        "datetime": event_datetime.isoformat(),
+        "description": description,
+        "duration_minutes": duration_minutes,
+        "recurring": recurring,  # None, "daily", "weekly", "monthly"
+        "created_at": datetime.now().isoformat()
+    }
+
+    events.append(event)
+    save_calendar(events)
+    return event, None
+
+def get_calendar_events(days_ahead=7):
+    """Get upcoming calendar events."""
+    events = load_calendar()
+    now = datetime.now()
+    end_date = now + timedelta(days=days_ahead)
+
+    upcoming = []
+    for event in events:
+        try:
+            event_dt = datetime.fromisoformat(event["datetime"])
+            if now <= event_dt <= end_date:
+                upcoming.append(event)
+        except:
+            pass
+
+    # Sort by datetime
+    upcoming.sort(key=lambda x: x["datetime"])
+    return upcoming
+
+def get_todays_events():
+    """Get today's calendar events."""
+    events = load_calendar()
+    today = datetime.now().date()
+
+    todays = []
+    for event in events:
+        try:
+            event_dt = datetime.fromisoformat(event["datetime"])
+            if event_dt.date() == today:
+                todays.append(event)
+        except:
+            pass
+
+    todays.sort(key=lambda x: x["datetime"])
+    return todays
+
+def delete_calendar_event(event_id):
+    """Delete a calendar event."""
+    events = load_calendar()
+    events = [e for e in events if e.get("id") != event_id]
+    save_calendar(events)
+    return True
+
+def find_calendar_event(query):
+    """Find a calendar event by title."""
+    events = load_calendar()
+    query_lower = query.lower()
+
+    for event in events:
+        if query_lower in event.get("title", "").lower():
+            return event
+    return None
+
 def get_active_window():
     """Get the currently active window title."""
     try:
@@ -969,15 +1536,24 @@ TOOLS = [
     },
     {
         "name": "smart_home",
-        "description": "Control smart home devices like lights, thermostats, etc.",
+        "description": "Control smart home devices via SmartThings - lights, switches, thermostats, locks, etc.",
         "input_schema": {
             "type": "object",
             "properties": {
-                "device": {"type": "string", "description": "Device to control"},
-                "action": {"type": "string", "description": "Action (on, off, dim 50%, etc.)"},
-                "room": {"type": "string", "description": "Room name (optional)"}
+                "device": {"type": "string", "description": "Device name to control (e.g., 'living room light', 'bedroom fan', 'front door')"},
+                "action": {"type": "string", "description": "Action: 'on', 'off', 'dim 50%', 'lock', 'unlock', 'temperature 72'"},
+                "room": {"type": "string", "description": "Room name (optional, helps find device)"}
             },
             "required": ["device", "action"]
+        }
+    },
+    {
+        "name": "list_smart_devices",
+        "description": "List all SmartThings devices available for control.",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+            "required": []
         }
     },
     # NEW TOOLS - PC Control
@@ -1301,6 +1877,105 @@ TOOLS = [
             "required": ["task_id"]
         }
     },
+    # ==== PROACTIVE ASSISTANCE TOOLS ====
+    {
+        "name": "get_proactive_insights",
+        "description": "Get proactive insights and predictions based on user patterns and current context. Use this to offer helpful suggestions.",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
+    },
+    {
+        "name": "get_predictions",
+        "description": "Get predicted actions the user might want based on their patterns.",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
+    },
+    # ==== CALENDAR TOOLS ====
+    {
+        "name": "add_event",
+        "description": "Add an event to the calendar. Supports natural dates like 'tomorrow', 'monday', or specific dates.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "title": {"type": "string", "description": "Event title"},
+                "date": {"type": "string", "description": "Date: 'today', 'tomorrow', 'monday', or 'YYYY-MM-DD'"},
+                "time": {"type": "string", "description": "Time: '3pm', '15:00', '3:30pm' (optional, defaults to 9am)"},
+                "description": {"type": "string", "description": "Event description (optional)"},
+                "duration": {"type": "integer", "description": "Duration in minutes (optional, default 60)"}
+            },
+            "required": ["title", "date"]
+        }
+    },
+    {
+        "name": "get_calendar",
+        "description": "Get upcoming calendar events. Shows events for the next 7 days by default.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "days": {"type": "integer", "description": "Number of days ahead to look (default 7)"}
+            },
+            "required": []
+        }
+    },
+    {
+        "name": "todays_schedule",
+        "description": "Get today's calendar events and schedule.",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
+    },
+    {
+        "name": "delete_event",
+        "description": "Delete a calendar event by title or ID.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "Event title or ID to delete"}
+            },
+            "required": ["query"]
+        }
+    },
+    # ==== VOICE CONTROL TOOLS ====
+    {
+        "name": "change_voice",
+        "description": "Change FRIDAY's voice. Available: rachel (default), domi, bella, elli, josh, arnold, adam, sam",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "voice_name": {"type": "string", "description": "Voice name: rachel, domi, bella, elli, josh, arnold, adam, or sam"}
+            },
+            "required": ["voice_name"]
+        }
+    },
+    {
+        "name": "list_voices",
+        "description": "List all available voice options.",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
+    },
+    {
+        "name": "adjust_voice",
+        "description": "Adjust voice settings like stability and style.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "stability": {"type": "number", "description": "Voice stability 0.0-1.0 (higher = more consistent, lower = more expressive)"},
+                "style": {"type": "number", "description": "Style exaggeration 0.0-1.0 (higher = more dramatic)"}
+            },
+            "required": []
+        }
+    },
 ]
 
 # ==============================================================================
@@ -1383,40 +2058,140 @@ def execute_tool(tool_name, tool_input):
             except Exception as e:
                 return f"Search error: {str(e)}"
 
-        # Smart Home
+        # Smart Home - SmartThings Integration
         elif tool_name == "smart_home":
-            device = tool_input.get("device", "").lower()
+            device_query = tool_input.get("device", "").lower()
             action = tool_input.get("action", "").lower()
-            room = tool_input.get("room", "all rooms")
-            config_file = os.path.join(APP_DIR, "smart_home_config.json")
+            room = tool_input.get("room", "")
 
-            if not os.path.exists(config_file):
-                return f"Smart home not configured. Would set {device} to {action} in {room}. Configure your platform to enable."
+            # First try SmartThings
+            if SMARTTHINGS_API_KEY:
+                try:
+                    # Include room in search if provided
+                    search_query = f"{room} {device_query}".strip() if room else device_query
+                    device, error = find_smartthings_device(search_query)
+
+                    if error and room:
+                        # Try without room
+                        device, error = find_smartthings_device(device_query)
+
+                    if error:
+                        return f"SmartThings: {error}"
+
+                    # Parse action
+                    if action in ["on", "turn on", "enable"]:
+                        result, error = smartthings_turn_on(device)
+                        if error:
+                            return f"Error: {error}"
+                        return f"Turned on {device['name']}."
+
+                    elif action in ["off", "turn off", "disable"]:
+                        result, error = smartthings_turn_off(device)
+                        if error:
+                            return f"Error: {error}"
+                        return f"Turned off {device['name']}."
+
+                    elif "dim" in action or "%" in action or "brightness" in action:
+                        # Extract number from action
+                        nums = re.findall(r'\d+', action)
+                        if nums:
+                            level = int(nums[0])
+                            result, error = smartthings_set_level(device, level)
+                            if error:
+                                return f"Error: {error}"
+                            return f"Set {device['name']} to {level}%."
+                        return "Please specify a brightness level (0-100)."
+
+                    elif "lock" in action:
+                        result, error = smartthings_lock(device, lock=True)
+                        if error:
+                            return f"Error: {error}"
+                        return f"Locked {device['name']}."
+
+                    elif "unlock" in action:
+                        result, error = smartthings_lock(device, lock=False)
+                        if error:
+                            return f"Error: {error}"
+                        return f"Unlocked {device['name']}."
+
+                    elif "temperature" in action or "thermostat" in action or "heat" in action or "cool" in action:
+                        nums = re.findall(r'\d+', action)
+                        if nums:
+                            temp = int(nums[0])
+                            mode = None
+                            if "heat" in action:
+                                mode = "heat"
+                            elif "cool" in action:
+                                mode = "cool"
+                            result, error = smartthings_set_thermostat(device, temp, mode)
+                            if error:
+                                return f"Error: {error}"
+                            return f"Set thermostat to {temp}°."
+                        return "Please specify a temperature."
+
+                    else:
+                        # Generic on/off based on action content
+                        if any(word in action for word in ["on", "start", "enable", "open"]):
+                            result, error = smartthings_turn_on(device)
+                            return f"Turned on {device['name']}." if not error else f"Error: {error}"
+                        elif any(word in action for word in ["off", "stop", "disable", "close"]):
+                            result, error = smartthings_turn_off(device)
+                            return f"Turned off {device['name']}." if not error else f"Error: {error}"
+                        else:
+                            return f"Unknown action '{action}' for {device['name']}. Try on, off, dim, lock, or temperature."
+
+                except Exception as e:
+                    return f"SmartThings error: {str(e)}"
+
+            # Fallback to config file (Hue, etc.)
+            config_file = os.path.join(APP_DIR, "smart_home_config.json")
+            if os.path.exists(config_file):
+                try:
+                    with open(config_file, 'r') as f:
+                        config = json.load(f)
+                    platform = config.get("platform")
+
+                    if platform == "hue":
+                        bridge_ip = config.get("bridge_ip")
+                        api_key = config.get("api_key")
+                        if "light" in device_query:
+                            state = {"on": action in ["on", "true", "1"]}
+                            if "off" in action:
+                                state = {"on": False}
+                            if "dim" in action:
+                                nums = re.findall(r'\d+', action)
+                                if nums:
+                                    state["bri"] = int(int(nums[0]) * 2.54)
+                                    state["on"] = True
+                            url = f"http://{bridge_ip}/api/{api_key}/groups/0/action"
+                            requests.put(url, json=state, timeout=5)
+                            return f"Done! Lights set to {action}."
+                    return f"Executed: {device_query} -> {action}"
+                except Exception as e:
+                    return f"Smart home error: {str(e)}"
+
+            return "Smart home not configured. Add SMARTTHINGS_API_KEY to your .env file."
+
+        elif tool_name == "list_smart_devices":
+            if not SMARTTHINGS_API_KEY:
+                return "SmartThings not configured. Add SMARTTHINGS_API_KEY to your .env file."
 
             try:
-                with open(config_file, 'r') as f:
-                    config = json.load(f)
-                platform = config.get("platform")
+                devices, error = get_smartthings_devices(force_refresh=True)
+                if error:
+                    return f"Error: {error}"
 
-                if platform == "hue":
-                    bridge_ip = config.get("bridge_ip")
-                    api_key = config.get("api_key")
-                    if "light" in device:
-                        state = {"on": action in ["on", "true", "1"]}
-                        if "off" in action:
-                            state = {"on": False}
-                        if "dim" in action:
-                            nums = re.findall(r'\d+', action)
-                            if nums:
-                                state["bri"] = int(int(nums[0]) * 2.54)
-                                state["on"] = True
-                        url = f"http://{bridge_ip}/api/{api_key}/groups/0/action"
-                        requests.put(url, json=state, timeout=5)
-                        return f"Done! Lights set to {action}."
+                if not devices:
+                    return "No SmartThings devices found."
 
-                return f"Executed: {device} -> {action} in {room}"
+                lines = ["SmartThings Devices:"]
+                for device_id, device in devices.items():
+                    caps = ", ".join(device["capabilities"][:3])  # Show first 3 capabilities
+                    lines.append(f"  - {device['name']} ({caps})")
+
+                return "\n".join(lines)
             except Exception as e:
-                return f"Smart home error: {str(e)}"
+                return f"Error listing devices: {str(e)}"
 
         # ==== NEW TOOLS: PC CONTROL ====
         elif tool_name == "open_application":
@@ -1466,6 +2241,9 @@ def execute_tool(tool_name, tool_input):
 
             try:
                 subprocess.Popen(cmd, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                # Track this action for learning
+                track_user_action(f"open_{app_name}")
+                track_pattern("app_usage", app_name)
                 return f"Opening {app_name}."
             except Exception as e:
                 return f"Couldn't open {app_name}: {str(e)}"
@@ -1987,8 +2765,9 @@ def execute_tool(tool_name, tool_input):
                     result = execute_tool(tool, params)
                     results.append(f"{tool}: {result}")
 
-                    # Track pattern
-                    track_pattern("command", f"routine:{routine_name}")
+                # Track pattern and schedule learning
+                track_pattern("command", f"routine:{routine_name}")
+                track_user_action(f"routine_{routine_name}")
 
                 return f"Executed {routine['name']}. " + " | ".join(results)
             except Exception as e:
@@ -2169,6 +2948,164 @@ def execute_tool(tool_name, tool_input):
                     return f"Task {task_id} not found"
             except Exception as e:
                 return f"Error cancelling task: {str(e)}"
+
+        # ===== PROACTIVE ASSISTANCE HANDLERS =====
+        elif tool_name == "get_proactive_insights":
+            try:
+                insights = generate_proactive_insight()
+                if insights:
+                    lines = []
+                    for insight in insights:
+                        lines.append(f"[{insight['priority'].upper()}] {insight['message']}")
+                    return "Proactive insights:\n" + "\n".join(lines)
+                else:
+                    return "No proactive insights right now."
+            except Exception as e:
+                return f"Error getting insights: {str(e)}"
+
+        elif tool_name == "get_predictions":
+            try:
+                predictions = get_predicted_actions()
+                if predictions:
+                    lines = []
+                    for pred in predictions:
+                        confidence_pct = int(pred['confidence'] * 100)
+                        lines.append(f"- {pred['action']} ({confidence_pct}% confident): {pred['reason']}")
+                    return "Predicted actions:\n" + "\n".join(lines)
+                else:
+                    return "Not enough pattern data yet to make predictions. Keep using me!"
+            except Exception as e:
+                return f"Error getting predictions: {str(e)}"
+
+        # ===== CALENDAR HANDLERS =====
+        elif tool_name == "add_event":
+            try:
+                title = tool_input.get("title", "Untitled Event")
+                date_str = tool_input.get("date", "today")
+                time_str = tool_input.get("time")
+                description = tool_input.get("description", "")
+                duration = tool_input.get("duration", 60)
+
+                event, error = add_calendar_event(title, date_str, time_str, description, duration)
+                if error:
+                    return f"Error: {error}"
+
+                event_dt = datetime.fromisoformat(event["datetime"])
+                formatted = event_dt.strftime("%A, %B %d at %I:%M %p")
+                return f"Added '{title}' to calendar for {formatted}."
+            except Exception as e:
+                return f"Error adding event: {str(e)}"
+
+        elif tool_name == "get_calendar":
+            try:
+                days = tool_input.get("days", 7)
+                events = get_calendar_events(days)
+
+                if not events:
+                    return f"No events in the next {days} days."
+
+                lines = [f"Upcoming events (next {days} days):"]
+                for event in events:
+                    event_dt = datetime.fromisoformat(event["datetime"])
+                    formatted = event_dt.strftime("%a %b %d, %I:%M %p")
+                    lines.append(f"  - {event['title']} ({formatted})")
+
+                return "\n".join(lines)
+            except Exception as e:
+                return f"Error getting calendar: {str(e)}"
+
+        elif tool_name == "todays_schedule":
+            try:
+                events = get_todays_events()
+
+                if not events:
+                    return "No events scheduled for today."
+
+                lines = ["Today's schedule:"]
+                for event in events:
+                    event_dt = datetime.fromisoformat(event["datetime"])
+                    time_str = event_dt.strftime("%I:%M %p")
+                    lines.append(f"  - {time_str}: {event['title']}")
+
+                return "\n".join(lines)
+            except Exception as e:
+                return f"Error getting schedule: {str(e)}"
+
+        elif tool_name == "delete_event":
+            try:
+                query = tool_input.get("query", "")
+
+                # Try to find by ID first
+                events = load_calendar()
+                for event in events:
+                    if event.get("id") == query:
+                        delete_calendar_event(query)
+                        return f"Deleted event: {event['title']}"
+
+                # Try to find by title
+                event = find_calendar_event(query)
+                if event:
+                    delete_calendar_event(event["id"])
+                    return f"Deleted event: {event['title']}"
+
+                return f"Event '{query}' not found."
+            except Exception as e:
+                return f"Error deleting event: {str(e)}"
+
+        # ===== VOICE CONTROL HANDLERS =====
+        elif tool_name == "change_voice":
+            try:
+                voice_name = tool_input.get("voice_name", "").lower()
+
+                if voice_name not in AVAILABLE_VOICES:
+                    available = ", ".join(AVAILABLE_VOICES.keys())
+                    return f"Voice '{voice_name}' not found. Available: {available}"
+
+                voice_info = AVAILABLE_VOICES[voice_name]
+                settings = load_voice_settings()
+                settings["voice_id"] = voice_info["id"]
+                save_voice_settings(settings)
+
+                return f"Voice changed to {voice_name}. {voice_info['description']}. This will take effect on my next response."
+            except Exception as e:
+                return f"Error changing voice: {str(e)}"
+
+        elif tool_name == "list_voices":
+            try:
+                lines = ["Available voices:"]
+                current_id = get_current_voice_id()
+
+                for name, info in AVAILABLE_VOICES.items():
+                    marker = " (current)" if info["id"] == current_id else ""
+                    lines.append(f"  - {name}{marker}: {info['description']}")
+
+                return "\n".join(lines)
+            except Exception as e:
+                return f"Error listing voices: {str(e)}"
+
+        elif tool_name == "adjust_voice":
+            try:
+                settings = load_voice_settings()
+                changed = []
+
+                stability = tool_input.get("stability")
+                if stability is not None:
+                    settings["stability"] = max(0.0, min(1.0, float(stability)))
+                    changed.append(f"stability to {settings['stability']}")
+
+                style = tool_input.get("style")
+                if style is not None:
+                    settings["style"] = max(0.0, min(1.0, float(style)))
+                    changed.append(f"style to {settings['style']}")
+
+                if not changed:
+                    return f"Current settings - Stability: {settings['stability']}, Style: {settings['style']}"
+
+                save_voice_settings(settings)
+
+                return f"Adjusted {', '.join(changed)}. Changes take effect on next response."
+            except Exception as e:
+                return f"Error adjusting voice: {str(e)}"
 
         return "Unknown tool"
     except Exception as e:
@@ -2443,11 +3380,21 @@ def speak():
         text_chunks = split_text(text)
         all_audio = b""
 
+        # Get current voice settings
+        settings = load_voice_settings()
+        current_voice_id = settings.get("voice_id", VOICE_ID)
+
         for chunk in text_chunks:
             audio_generator = elevenlabs_client.text_to_speech.convert(
-                voice_id=VOICE_ID,
+                voice_id=current_voice_id,
                 text=chunk,
-                model_id="eleven_turbo_v2_5"
+                model_id=settings.get("model_id", "eleven_turbo_v2_5"),
+                voice_settings={
+                    "stability": settings.get("stability", 0.5),
+                    "similarity_boost": settings.get("similarity_boost", 0.75),
+                    "style": settings.get("style", 0.0),
+                    "use_speaker_boost": settings.get("use_speaker_boost", True)
+                }
             )
             for audio_chunk in audio_generator:
                 all_audio += audio_chunk
@@ -2691,6 +3638,19 @@ def get_suggestions_endpoint():
     try:
         suggestions = get_context_suggestions()
         return jsonify({'suggestions': suggestions})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/get_proactive_insights', methods=['GET'])
+def get_proactive_insights_endpoint():
+    """Get proactive insights for the UI."""
+    try:
+        insights = generate_proactive_insight()
+        predictions = get_predicted_actions()
+        return jsonify({
+            'insights': insights,
+            'predictions': predictions
+        })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
