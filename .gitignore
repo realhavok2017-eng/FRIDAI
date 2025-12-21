@@ -16,6 +16,7 @@ server.log
 *.pid
 
 # User data (don't commit)
+SESSION_NOTES.md
 conversation_history.json
 user_settings.json
 smart_home_config.json
