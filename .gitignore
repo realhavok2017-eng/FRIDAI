@@ -20,6 +20,8 @@ conversation_history.json
 user_settings.json
 smart_home_config.json
 reminders.json
+user_profile.json
+memory_bank.json
 
 # Environment
 .env

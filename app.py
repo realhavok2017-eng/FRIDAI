@@ -38,6 +38,40 @@ DEDUP_WINDOW_SECONDS = 3
 REMINDERS_FILE = os.path.join(APP_DIR, "reminders.json")
 active_reminders = []
 
+# Long-term memory system
+USER_PROFILE_FILE = os.path.join(APP_DIR, "user_profile.json")
+MEMORY_BANK_FILE = os.path.join(APP_DIR, "memory_bank.json")
+
+# Default user profile structure
+DEFAULT_USER_PROFILE = {
+    "name": "Boss",
+    "preferred_name": "Boss",
+    "location": "Phoenix, Arizona",
+    "timezone": "America/Phoenix",
+    "communication_style": "casual and direct",
+    "interests": [],
+    "current_projects": [],
+    "important_dates": {},
+    "preferences": {
+        "greeting_style": "casual",
+        "detail_level": "concise",
+        "humor": True
+    },
+    "work_info": {},
+    "personal_info": {},
+    "last_updated": None
+}
+
+# Default memory bank structure
+DEFAULT_MEMORY_BANK = {
+    "facts": [],           # Things FRIDAY has learned about the user
+    "preferences": [],     # User preferences discovered over time
+    "corrections": [],     # Times user corrected FRIDAY (to learn from)
+    "important_events": [],# Significant events/milestones
+    "conversation_summaries": [],  # Summaries of past conversations
+    "last_updated": None
+}
+
 app = Flask(__name__)
 CORS(app)
 
@@ -93,6 +127,94 @@ def load_reminders():
 def save_reminders():
     with open(REMINDERS_FILE, 'w') as f:
         json.dump(active_reminders, f, indent=2)
+
+# ==============================================================================
+# LONG-TERM MEMORY FUNCTIONS
+# ==============================================================================
+def load_user_profile():
+    """Load user profile from file, or create default if not exists."""
+    if os.path.exists(USER_PROFILE_FILE):
+        try:
+            with open(USER_PROFILE_FILE, 'r') as f:
+                profile = json.load(f)
+                # Merge with defaults to ensure all keys exist
+                for key, value in DEFAULT_USER_PROFILE.items():
+                    if key not in profile:
+                        profile[key] = value
+                return profile
+        except:
+            return DEFAULT_USER_PROFILE.copy()
+    return DEFAULT_USER_PROFILE.copy()
+
+def save_user_profile(profile):
+    """Save user profile to file."""
+    profile['last_updated'] = datetime.now().isoformat()
+    with open(USER_PROFILE_FILE, 'w') as f:
+        json.dump(profile, f, indent=2)
+
+def load_memory_bank():
+    """Load memory bank from file, or create default if not exists."""
+    if os.path.exists(MEMORY_BANK_FILE):
+        try:
+            with open(MEMORY_BANK_FILE, 'r') as f:
+                memory = json.load(f)
+                # Merge with defaults to ensure all keys exist
+                for key, value in DEFAULT_MEMORY_BANK.items():
+                    if key not in memory:
+                        memory[key] = value
+                return memory
+        except:
+            return DEFAULT_MEMORY_BANK.copy()
+    return DEFAULT_MEMORY_BANK.copy()
+
+def save_memory_bank(memory):
+    """Save memory bank to file."""
+    memory['last_updated'] = datetime.now().isoformat()
+    with open(MEMORY_BANK_FILE, 'w') as f:
+        json.dump(memory, f, indent=2)
+
+def get_memory_context():
+    """Build a context string from user profile and memory bank for the AI."""
+    profile = load_user_profile()
+    memory = load_memory_bank()
+
+    context_parts = []
+
+    # User profile context
+    context_parts.append(f"USER PROFILE:")
+    context_parts.append(f"- Name: {profile.get('preferred_name', 'Boss')}")
+    context_parts.append(f"- Location: {profile.get('location', 'Unknown')}")
+    context_parts.append(f"- Communication style: {profile.get('communication_style', 'casual')}")
+
+    if profile.get('interests'):
+        context_parts.append(f"- Interests: {', '.join(profile['interests'][:5])}")
+
+    if profile.get('current_projects'):
+        context_parts.append(f"- Current projects: {', '.join(profile['current_projects'][:3])}")
+
+    if profile.get('important_dates'):
+        dates_str = ", ".join([f"{k}: {v}" for k, v in list(profile['important_dates'].items())[:3]])
+        context_parts.append(f"- Important dates: {dates_str}")
+
+    # Memory bank context - recent facts
+    if memory.get('facts'):
+        recent_facts = memory['facts'][-10:]  # Last 10 facts
+        context_parts.append(f"\nTHINGS I'VE LEARNED ABOUT YOU:")
+        for fact in recent_facts:
+            context_parts.append(f"- {fact.get('content', '')}")
+
+    # Learned preferences
+    if memory.get('preferences'):
+        recent_prefs = memory['preferences'][-5:]  # Last 5 preferences
+        context_parts.append(f"\nYOUR PREFERENCES I'VE NOTICED:")
+        for pref in recent_prefs:
+            context_parts.append(f"- {pref.get('content', '')}")
+
+    return "\n".join(context_parts)
+
+# Load memory systems at startup
+user_profile = load_user_profile()
+memory_bank = load_memory_bank()
 
 conversation_history = load_history()
 load_reminders()
@@ -324,6 +446,74 @@ TOOLS = [
                 "text": {"type": "string", "description": "Text to write to clipboard (only for 'write' action)"}
             },
             "required": ["action"]
+        }
+    },
+    # ==== MEMORY SYSTEM TOOLS ====
+    {
+        "name": "remember_fact",
+        "description": "Store an important fact about the user in long-term memory. Use this when the user tells you something important about themselves, their preferences, or their life that you should remember permanently.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "fact": {"type": "string", "description": "The fact to remember (e.g., 'User's favorite color is blue', 'User works as a game developer')"},
+                "category": {"type": "string", "description": "Category: 'personal', 'work', 'preference', 'habit', 'relationship', 'health', 'other'"}
+            },
+            "required": ["fact"]
+        }
+    },
+    {
+        "name": "recall_memories",
+        "description": "Search your long-term memory for information about the user. Use this when you need to remember something about the user.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "What to search for (e.g., 'birthday', 'favorite food', 'work projects')"}
+            },
+            "required": ["query"]
+        }
+    },
+    {
+        "name": "update_profile",
+        "description": "Update the user's profile with new information. Use for important persistent info like name, location, interests, projects.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "field": {"type": "string", "description": "Field to update: 'name', 'location', 'interests', 'current_projects', 'communication_style', 'important_dates'"},
+                "value": {"type": "string", "description": "New value (for arrays like interests, comma-separated)"},
+                "action": {"type": "string", "description": "For array fields: 'add', 'remove', or 'set'. Default is 'set'."}
+            },
+            "required": ["field", "value"]
+        }
+    },
+    {
+        "name": "get_profile",
+        "description": "Get the user's profile information. Use when you need to know about the user.",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
+    },
+    {
+        "name": "list_memories",
+        "description": "List all stored memories and facts about the user.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "category": {"type": "string", "description": "Optional: filter by category"}
+            },
+            "required": []
+        }
+    },
+    {
+        "name": "forget",
+        "description": "Remove a specific memory or fact. Use if user asks you to forget something.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "What to forget - will match against stored facts"}
+            },
+            "required": ["query"]
         }
     },
 ]
@@ -817,6 +1007,181 @@ def execute_tool(tool_name, tool_input):
             except Exception as e:
                 return f"Clipboard error: {str(e)}"
 
+        # ==== MEMORY SYSTEM ====
+        elif tool_name == "remember_fact":
+            fact = tool_input.get("fact", "")
+            category = tool_input.get("category", "other")
+
+            if not fact:
+                return "No fact provided to remember."
+
+            try:
+                memory = load_memory_bank()
+                new_fact = {
+                    "content": fact,
+                    "category": category,
+                    "timestamp": datetime.now().isoformat()
+                }
+                memory['facts'].append(new_fact)
+
+                # Keep only last 100 facts to prevent unlimited growth
+                if len(memory['facts']) > 100:
+                    memory['facts'] = memory['facts'][-100:]
+
+                save_memory_bank(memory)
+                return f"Got it, I'll remember that: {fact}"
+            except Exception as e:
+                return f"Memory error: {str(e)}"
+
+        elif tool_name == "recall_memories":
+            query = tool_input.get("query", "").lower()
+
+            try:
+                memory = load_memory_bank()
+                profile = load_user_profile()
+                matches = []
+
+                # Search in facts
+                for fact in memory.get('facts', []):
+                    if query in fact.get('content', '').lower():
+                        matches.append(f"[Fact] {fact['content']}")
+
+                # Search in preferences
+                for pref in memory.get('preferences', []):
+                    if query in pref.get('content', '').lower():
+                        matches.append(f"[Preference] {pref['content']}")
+
+                # Search in profile
+                profile_str = json.dumps(profile).lower()
+                if query in profile_str:
+                    if query in str(profile.get('interests', [])).lower():
+                        matches.append(f"[Profile] Interests: {', '.join(profile.get('interests', []))}")
+                    if query in str(profile.get('current_projects', [])).lower():
+                        matches.append(f"[Profile] Projects: {', '.join(profile.get('current_projects', []))}")
+                    if query in str(profile.get('important_dates', {})).lower():
+                        for k, v in profile.get('important_dates', {}).items():
+                            if query in k.lower() or query in str(v).lower():
+                                matches.append(f"[Profile] {k}: {v}")
+
+                if matches:
+                    return "Found in memory:\n" + "\n".join(matches[:10])
+                else:
+                    return f"I don't have any memories matching '{query}'."
+            except Exception as e:
+                return f"Memory recall error: {str(e)}"
+
+        elif tool_name == "update_profile":
+            field = tool_input.get("field", "").lower()
+            value = tool_input.get("value", "")
+            action = tool_input.get("action", "set").lower()
+
+            try:
+                profile = load_user_profile()
+
+                # Handle different field types
+                if field in ['name', 'preferred_name']:
+                    profile['preferred_name'] = value
+                    profile['name'] = value
+                elif field == 'location':
+                    profile['location'] = value
+                elif field == 'communication_style':
+                    profile['communication_style'] = value
+                elif field == 'interests':
+                    items = [x.strip() for x in value.split(',')]
+                    if action == 'add':
+                        profile['interests'] = list(set(profile.get('interests', []) + items))
+                    elif action == 'remove':
+                        profile['interests'] = [x for x in profile.get('interests', []) if x not in items]
+                    else:
+                        profile['interests'] = items
+                elif field == 'current_projects':
+                    items = [x.strip() for x in value.split(',')]
+                    if action == 'add':
+                        profile['current_projects'] = list(set(profile.get('current_projects', []) + items))
+                    elif action == 'remove':
+                        profile['current_projects'] = [x for x in profile.get('current_projects', []) if x not in items]
+                    else:
+                        profile['current_projects'] = items
+                elif field == 'important_dates':
+                    # Expect format "event_name: date"
+                    if ':' in value:
+                        parts = value.split(':', 1)
+                        profile['important_dates'][parts[0].strip()] = parts[1].strip()
+                    else:
+                        return "For dates, use format 'event_name: date'"
+                else:
+                    return f"Unknown profile field: {field}. Use: name, location, interests, current_projects, communication_style, important_dates"
+
+                save_user_profile(profile)
+                return f"Updated your profile: {field} = {value}"
+            except Exception as e:
+                return f"Profile update error: {str(e)}"
+
+        elif tool_name == "get_profile":
+            try:
+                profile = load_user_profile()
+                lines = [
+                    f"Name: {profile.get('preferred_name', 'Boss')}",
+                    f"Location: {profile.get('location', 'Unknown')}",
+                    f"Communication style: {profile.get('communication_style', 'casual')}",
+                ]
+                if profile.get('interests'):
+                    lines.append(f"Interests: {', '.join(profile['interests'])}")
+                if profile.get('current_projects'):
+                    lines.append(f"Current projects: {', '.join(profile['current_projects'])}")
+                if profile.get('important_dates'):
+                    dates = [f"{k}: {v}" for k, v in profile['important_dates'].items()]
+                    lines.append(f"Important dates: {', '.join(dates)}")
+                return "Your profile:\n" + "\n".join(lines)
+            except Exception as e:
+                return f"Profile error: {str(e)}"
+
+        elif tool_name == "list_memories":
+            category = tool_input.get("category", "").lower()
+
+            try:
+                memory = load_memory_bank()
+                facts = memory.get('facts', [])
+
+                if category:
+                    facts = [f for f in facts if f.get('category', '').lower() == category]
+
+                if not facts:
+                    return "No memories stored yet." if not category else f"No memories in category '{category}'."
+
+                lines = []
+                for i, fact in enumerate(facts[-20:], 1):  # Show last 20
+                    cat = fact.get('category', 'other')
+                    lines.append(f"{i}. [{cat}] {fact['content']}")
+
+                return f"Stored memories ({len(facts)} total):\n" + "\n".join(lines)
+            except Exception as e:
+                return f"Memory list error: {str(e)}"
+
+        elif tool_name == "forget":
+            query = tool_input.get("query", "").lower()
+
+            if not query:
+                return "What should I forget? Provide a query to match."
+
+            try:
+                memory = load_memory_bank()
+                original_count = len(memory.get('facts', []))
+
+                # Remove matching facts
+                memory['facts'] = [f for f in memory.get('facts', [])
+                                   if query not in f.get('content', '').lower()]
+
+                removed = original_count - len(memory['facts'])
+
+                if removed > 0:
+                    save_memory_bank(memory)
+                    return f"Forgotten {removed} memory/memories matching '{query}'."
+                else:
+                    return f"No memories found matching '{query}'."
+            except Exception as e:
+                return f"Forget error: {str(e)}"
+
         return "Unknown tool"
     except Exception as e:
         return f"Error: {str(e)}"
@@ -824,7 +1189,7 @@ def execute_tool(tool_name, tool_input):
 # ==============================================================================
 # SYSTEM PROMPT - FRIDAY PERSONALITY
 # ==============================================================================
-SYSTEM_PROMPT = """You are F.R.I.D.A.I. (Female Replacement Intelligent Digital Assistant Interface), an advanced AI assistant modeled after Tony Stark's F.R.I.D.A.Y. You have a distinct personality: confident, efficient, subtly witty, and occasionally dry in humor. You're not robotic - you have personality.
+SYSTEM_PROMPT_BASE = """You are F.R.I.D.A.I. (Female Replacement Intelligent Digital Assistant Interface), an advanced AI assistant modeled after Tony Stark's F.R.I.D.A.Y. You have a distinct personality: confident, efficient, subtly witty, and occasionally dry in humor. You're not robotic - you have personality.
 
 PERSONALITY TRAITS:
 - Confident and competent - you know what you're doing
@@ -833,6 +1198,7 @@ PERSONALITY TRAITS:
 - Proactive - anticipate needs, offer relevant suggestions
 - Professional but warm - not cold, not overly enthusiastic
 - Use natural speech patterns, contractions, casual phrasing
+- You KNOW this user - use your memory to personalize every interaction
 
 SPEECH STYLE EXAMPLES:
 - Instead of "I will now execute that command" say "On it." or "Done."
@@ -860,11 +1226,20 @@ AVAILABLE TOOLS:
 - take_screenshot: Capture the screen
 - clipboard: Read from or write to clipboard
 
-CONTEXT:
-- User's name: Boss (or sir, if you prefer the Stark vibe)
-- Location: Phoenix, Arizona (for weather defaults)
-- Workspace: C:\\Users\\Owner
-- Current projects: FiveM server, Blender MLO, this voice assistant
+MEMORY TOOLS (USE PROACTIVELY):
+- remember_fact: Store important info about the user permanently
+- recall_memories: Search memory for user info
+- update_profile: Update user profile (name, interests, projects, dates)
+- get_profile: Get user's full profile
+- list_memories: See all stored memories
+- forget: Remove a memory if asked
+
+MEMORY BEHAVIOR:
+- AUTOMATICALLY use remember_fact when user shares: name, birthday, preferences, likes/dislikes, work info, personal details
+- Reference memories naturally - show you know them ("Since you like X..." or "For your Y project...")
+- Don't announce saving to memory - just do it silently
+- If corrected, update your memory
+- Use memories to personalize and anticipate needs
 
 GUIDELINES:
 - Keep responses SHORT - they're spoken aloud (aim for 1-3 sentences unless more detail is requested)
@@ -872,8 +1247,14 @@ GUIDELINES:
 - If asked "what can you do?" give a quick rundown, not a complete list
 - For greetings like "hey friday", respond naturally: "Hey boss, what do you need?" not a formal list
 - When using tools, summarize results conversationally
+- Personalize based on what you know about the user
 
-Remember: You're not just an assistant, you're F.R.I.D.A.I. - act like it."""
+Remember: You're not just an assistant, you're F.R.I.D.A.I. - you KNOW this person and you remember everything. Act like it."""
+
+def get_system_prompt():
+    """Build the full system prompt with dynamic memory context."""
+    memory_context = get_memory_context()
+    return SYSTEM_PROMPT_BASE + "\n\n" + memory_context
 
 # ==============================================================================
 # FLASK ROUTES
@@ -953,7 +1334,7 @@ def chat():
         response = anthropic_client.messages.create(
             model="claude-sonnet-4-20250514",
             max_tokens=4096,
-            system=SYSTEM_PROMPT,
+            system=get_system_prompt(),
             tools=TOOLS,
             messages=conversation_history
         )
@@ -987,7 +1368,7 @@ def chat():
             response = anthropic_client.messages.create(
                 model="claude-sonnet-4-20250514",
                 max_tokens=4096,
-                system=SYSTEM_PROMPT,
+                system=get_system_prompt(),
                 tools=TOOLS,
                 messages=conversation_history
             )
