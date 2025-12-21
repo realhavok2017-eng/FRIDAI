@@ -254,7 +254,189 @@ def get_memory_context():
         for pref in recent_prefs:
             context_parts.append(f"- {pref.get('content', '')}")
 
+    # Recent conversation summaries
+    if memory.get('conversation_summaries'):
+        recent_summaries = memory['conversation_summaries'][-3:]  # Last 3 summaries
+        context_parts.append(f"\nRECENT CONVERSATION TOPICS:")
+        for summary in recent_summaries:
+            context_parts.append(f"- {summary.get('summary', '')}")
+
+    # Learned corrections (things user has corrected you on)
+    if memory.get('corrections'):
+        recent_corrections = memory['corrections'][-5:]  # Last 5 corrections
+        context_parts.append(f"\nCORRECTIONS TO REMEMBER:")
+        for correction in recent_corrections:
+            context_parts.append(f"- {correction.get('content', '')}")
+
     return "\n".join(context_parts)
+
+# ==============================================================================
+# CONVERSATION SUMMARY FUNCTIONS
+# ==============================================================================
+SUMMARY_INTERVAL = 20  # Summarize every 20 messages
+last_summary_count = 0
+
+def should_summarize_conversation():
+    """Check if we should create a new conversation summary."""
+    global last_summary_count
+    history = load_history()
+    current_count = len(history)
+
+    # Summarize every SUMMARY_INTERVAL messages
+    if current_count - last_summary_count >= SUMMARY_INTERVAL:
+        return True
+    return False
+
+def create_conversation_summary(history_slice):
+    """Create a summary of recent conversation topics."""
+    if not history_slice:
+        return None
+
+    # Extract topics from recent messages
+    topics = []
+    for msg in history_slice:
+        content = msg.get('content', '')
+        if isinstance(content, str) and len(content) > 10:
+            # Take first 100 chars of each message for topic extraction
+            topics.append(content[:100])
+
+    if not topics:
+        return None
+
+    # Simple topic extraction - look for key themes
+    topic_text = " ".join(topics).lower()
+
+    detected_topics = []
+    topic_keywords = {
+        'coding': ['code', 'programming', 'vscode', 'python', 'javascript', 'git', 'debug'],
+        'gaming': ['game', 'steam', 'play', 'gaming'],
+        'music': ['spotify', 'music', 'song', 'playlist', 'play'],
+        'work': ['work', 'project', 'task', 'meeting', 'deadline'],
+        'system': ['cpu', 'memory', 'disk', 'volume', 'open app', 'screenshot'],
+        'reminder': ['remind', 'timer', 'reminder', 'alarm'],
+        'weather': ['weather', 'forecast', 'temperature'],
+        'general': ['hello', 'hey', 'hi', 'thanks', 'thank you']
+    }
+
+    for topic, keywords in topic_keywords.items():
+        if any(kw in topic_text for kw in keywords):
+            detected_topics.append(topic)
+
+    if detected_topics:
+        return f"Talked about: {', '.join(detected_topics)}"
+    else:
+        return "General conversation"
+
+def save_conversation_summary():
+    """Create and save a summary of recent conversation."""
+    global last_summary_count
+
+    history = load_history()
+    if len(history) < SUMMARY_INTERVAL:
+        return
+
+    # Get the messages since last summary
+    messages_to_summarize = history[last_summary_count:last_summary_count + SUMMARY_INTERVAL]
+
+    summary_text = create_conversation_summary(messages_to_summarize)
+    if summary_text:
+        memory = load_memory_bank()
+        memory['conversation_summaries'].append({
+            'summary': summary_text,
+            'timestamp': datetime.now().isoformat(),
+            'message_count': len(messages_to_summarize)
+        })
+        # Keep only last 10 summaries
+        memory['conversation_summaries'] = memory['conversation_summaries'][-10:]
+        save_memory_bank(memory)
+
+    last_summary_count = len(history)
+
+# ==============================================================================
+# CORRECTION LEARNING FUNCTIONS
+# ==============================================================================
+CORRECTION_PATTERNS = [
+    r"no,?\s+(?:i\s+meant|i\s+said|it'?s|that'?s)",
+    r"that'?s\s+(?:not\s+right|wrong|incorrect)",
+    r"actually,?\s+(?:i|it|that)",
+    r"i\s+didn'?t\s+(?:mean|say|ask)",
+    r"you\s+(?:misunderstood|got\s+it\s+wrong)",
+    r"let\s+me\s+(?:clarify|correct)",
+    r"i\s+(?:meant|mean)\s+to\s+say",
+    r"not\s+(?:that|what\s+i)",
+    r"wrong,?\s+i",
+    r"nope,?\s+(?:i|it)",
+]
+
+def detect_correction(user_message):
+    """Detect if the user is correcting FRIDAY."""
+    message_lower = user_message.lower()
+
+    for pattern in CORRECTION_PATTERNS:
+        if re.search(pattern, message_lower):
+            return True
+
+    return False
+
+def extract_correction_content(user_message, previous_response=None):
+    """Extract the correction content from user message."""
+    # Clean up the message to get the actual correction
+    message = user_message.strip()
+
+    # Remove common correction prefixes
+    prefixes_to_remove = [
+        r"^no,?\s*",
+        r"^actually,?\s*",
+        r"^that'?s\s+not\s+right,?\s*",
+        r"^wrong,?\s*",
+        r"^nope,?\s*",
+    ]
+
+    for prefix in prefixes_to_remove:
+        message = re.sub(prefix, "", message, flags=re.IGNORECASE)
+
+    return message.strip()
+
+def save_correction(correction_content, context=None):
+    """Save a correction to memory bank."""
+    memory = load_memory_bank()
+
+    correction_entry = {
+        'content': correction_content,
+        'timestamp': datetime.now().isoformat(),
+        'context': context
+    }
+
+    memory['corrections'].append(correction_entry)
+
+    # Keep only last 20 corrections
+    memory['corrections'] = memory['corrections'][-20:]
+    save_memory_bank(memory)
+
+    return True
+
+def check_and_save_correction(user_message, conversation_history):
+    """Check if message is a correction and save it."""
+    if not detect_correction(user_message):
+        return False
+
+    # Get the previous assistant response for context
+    previous_response = None
+    if len(conversation_history) >= 2:
+        for msg in reversed(conversation_history[:-1]):
+            if msg.get('role') == 'assistant':
+                content = msg.get('content', '')
+                if isinstance(content, str):
+                    previous_response = content[:200]  # First 200 chars for context
+                break
+
+    correction_content = extract_correction_content(user_message, previous_response)
+
+    if len(correction_content) > 5:  # Only save meaningful corrections
+        save_correction(correction_content, context=previous_response)
+        return True
+
+    return False
 
 # ==============================================================================
 # ROUTINES FUNCTIONS
@@ -280,6 +462,135 @@ def save_routines(routines):
     """Save routines to file."""
     with open(ROUTINES_FILE, 'w') as f:
         json.dump(routines, f, indent=2)
+
+# ==============================================================================
+# MULTI-STEP TASK HANDLING
+# ==============================================================================
+TASKS_FILE = os.path.join(APP_DIR, "active_tasks.json")
+active_tasks = []
+
+def load_tasks():
+    """Load active tasks from file."""
+    global active_tasks
+    if os.path.exists(TASKS_FILE):
+        try:
+            with open(TASKS_FILE, 'r') as f:
+                active_tasks = json.load(f)
+        except:
+            active_tasks = []
+    return active_tasks
+
+def save_tasks():
+    """Save active tasks to file."""
+    with open(TASKS_FILE, 'w') as f:
+        json.dump(active_tasks, f, indent=2)
+
+def create_multi_step_task(name, description, steps):
+    """Create a new multi-step task."""
+    global active_tasks
+
+    task = {
+        'id': f"task_{int(time.time())}",
+        'name': name,
+        'description': description,
+        'steps': steps,  # List of {"action": "tool_name", "params": {...}, "description": "..."}
+        'current_step': 0,
+        'status': 'pending',
+        'results': [],
+        'created_at': datetime.now().isoformat()
+    }
+
+    active_tasks.append(task)
+    save_tasks()
+    return task['id']
+
+def execute_task_step(task_id):
+    """Execute the next step of a task."""
+    global active_tasks
+
+    # Find the task
+    task = None
+    for t in active_tasks:
+        if t['id'] == task_id:
+            task = t
+            break
+
+    if not task:
+        return None, "Task not found"
+
+    if task['status'] == 'completed':
+        return None, "Task already completed"
+
+    if task['current_step'] >= len(task['steps']):
+        task['status'] = 'completed'
+        save_tasks()
+        return None, "All steps completed"
+
+    # Get current step
+    step = task['steps'][task['current_step']]
+    tool_name = step.get('action')
+    params = step.get('params', {})
+
+    # Execute the tool
+    try:
+        result = execute_tool(tool_name, params)
+        task['results'].append({
+            'step': task['current_step'],
+            'tool': tool_name,
+            'result': result,
+            'timestamp': datetime.now().isoformat()
+        })
+        task['current_step'] += 1
+
+        if task['current_step'] >= len(task['steps']):
+            task['status'] = 'completed'
+
+        task['status'] = 'in_progress' if task['current_step'] < len(task['steps']) else 'completed'
+        save_tasks()
+        return result, step.get('description', f"Executed {tool_name}")
+    except Exception as e:
+        task['status'] = 'failed'
+        task['error'] = str(e)
+        save_tasks()
+        return None, f"Step failed: {str(e)}"
+
+def execute_full_task(task_id):
+    """Execute all remaining steps of a task."""
+    results = []
+    while True:
+        result, message = execute_task_step(task_id)
+        if result is None and "completed" in message.lower():
+            break
+        if result is None:
+            results.append(f"Error: {message}")
+            break
+        results.append(message)
+
+    return results
+
+def get_task_status(task_id):
+    """Get the status of a task."""
+    for task in active_tasks:
+        if task['id'] == task_id:
+            return task
+    return None
+
+def list_active_tasks():
+    """List all active/pending tasks."""
+    return [t for t in active_tasks if t['status'] in ['pending', 'in_progress']]
+
+def cancel_task(task_id):
+    """Cancel a task."""
+    global active_tasks
+    for task in active_tasks:
+        if task['id'] == task_id:
+            task['status'] = 'cancelled'
+            save_tasks()
+            return True
+    return False
+
+# Load tasks at startup
+load_tasks()
 
 # ==============================================================================
 # PATTERNS FUNCTIONS
@@ -451,6 +762,120 @@ def get_time_context():
         "formatted_time": now.strftime("%I:%M %p"),
         "formatted_date": now.strftime("%B %d, %Y")
     }
+
+# ==============================================================================
+# CONTEXT-AWARE SUGGESTIONS
+# ==============================================================================
+def get_context_suggestions():
+    """Generate smart suggestions based on current context."""
+    suggestions = []
+    time_ctx = get_time_context()
+    patterns = load_patterns()
+    profile = load_user_profile()
+    hour = time_ctx['hour']
+    day = time_ctx['day']
+
+    # Get active window for context
+    try:
+        active_window = get_active_window().lower()
+    except:
+        active_window = ""
+
+    # Time-based suggestions
+    if 6 <= hour <= 9 and day not in ["Saturday", "Sunday"]:
+        suggestions.append({
+            "type": "routine",
+            "suggestion": "Ready to start your day? I can run work_mode to get you set up.",
+            "action": "run_routine",
+            "params": {"routine_name": "work_mode"}
+        })
+
+    if 22 <= hour or hour <= 2:
+        suggestions.append({
+            "type": "routine",
+            "suggestion": "Getting late - want me to switch to night mode?",
+            "action": "run_routine",
+            "params": {"routine_name": "night_mode"}
+        })
+
+    # Pattern-based suggestions
+    app_usage = patterns.get('app_usage', {})
+    hour_str = str(hour)
+
+    # Check if there's an app commonly used at this hour
+    for app, data in app_usage.items():
+        if isinstance(data, dict):
+            hours = data.get('hours', {})
+            if hours.get(hour_str, 0) >= 3:  # Used at this hour at least 3 times
+                suggestions.append({
+                    "type": "app",
+                    "suggestion": f"You usually use {app} around this time. Want me to open it?",
+                    "action": "open_application",
+                    "params": {"app_name": app}
+                })
+                break  # Only suggest one app
+
+    # Active window context suggestions
+    if "visual studio" in active_window or "vscode" in active_window:
+        suggestions.append({
+            "type": "context",
+            "suggestion": "I see you're coding. Need me to run any commands or look something up?",
+            "action": None,
+            "params": {}
+        })
+    elif "spotify" in active_window:
+        suggestions.append({
+            "type": "context",
+            "suggestion": "Listening to music? I can control playback or find something new for you.",
+            "action": None,
+            "params": {}
+        })
+    elif "discord" in active_window:
+        suggestions.append({
+            "type": "context",
+            "suggestion": "On Discord? Let me know if you need anything while you chat.",
+            "action": None,
+            "params": {}
+        })
+    elif "steam" in active_window or "game" in active_window:
+        if not any(s.get('action') == 'run_routine' and s.get('params', {}).get('routine_name') == 'gaming_mode' for s in suggestions):
+            suggestions.append({
+                "type": "routine",
+                "suggestion": "Gaming time? I can set up gaming mode for optimal performance.",
+                "action": "run_routine",
+                "params": {"routine_name": "gaming_mode"}
+            })
+
+    # Weekend suggestions
+    if time_ctx['is_weekend'] and 10 <= hour <= 14:
+        suggestions.append({
+            "type": "info",
+            "suggestion": "It's the weekend! Want a briefing or just relaxing?",
+            "action": "morning_briefing",
+            "params": {}
+        })
+
+    # Reminder check suggestion
+    if len(active_reminders) > 0:
+        suggestions.append({
+            "type": "reminder",
+            "suggestion": f"You have {len(active_reminders)} active reminder{'s' if len(active_reminders) > 1 else ''}. Want me to list them?",
+            "action": "list_reminders",
+            "params": {}
+        })
+
+    return suggestions[:3]  # Return top 3 suggestions
+
+def get_proactive_suggestion():
+    """Get a single proactive suggestion based on context (for natural conversation)."""
+    suggestions = get_context_suggestions()
+    if suggestions:
+        # Prioritize routine and app suggestions over informational ones
+        for s in suggestions:
+            if s['type'] in ['routine', 'app']:
+                return s['suggestion']
+        return suggestions[0]['suggestion']
+    return None
 
 # Load all systems at startup
 user_profile = load_user_profile()
@@ -829,6 +1254,51 @@ TOOLS = [
             "type": "object",
             "properties": {},
             "required": []
+        }
+    },
+    # ==== MULTI-STEP TASK TOOLS ====
+    {
+        "name": "create_task",
+        "description": "Create a multi-step task that executes several actions in sequence. Use for complex requests that require multiple steps.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "description": "Short name for the task"},
+                "description": {"type": "string", "description": "What this task accomplishes"},
+                "steps": {"type": "string", "description": "JSON array of steps. Each step: {\"action\": \"tool_name\", \"params\": {...}, \"description\": \"what this step does\"}"}
+            },
+            "required": ["name", "description", "steps"]
+        }
+    },
+    {
+        "name": "run_task",
+        "description": "Execute a multi-step task by ID or run all steps of a newly created task.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "task_id": {"type": "string", "description": "ID of the task to run"}
+            },
+            "required": ["task_id"]
+        }
+    },
+    {
+        "name": "list_tasks",
+        "description": "List all active and pending multi-step tasks.",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
+    },
+    {
+        "name": "cancel_task",
+        "description": "Cancel a multi-step task by ID.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "task_id": {"type": "string", "description": "ID of the task to cancel"}
+            },
+            "required": ["task_id"]
         }
     },
 ]
@@ -1633,32 +2103,72 @@ def execute_tool(tool_name, tool_input):
 
         elif tool_name == "suggest_routine":
             try:
-                time_ctx = get_time_context()
-                patterns = load_patterns()
-                suggestions = []
-
-                # Time-based suggestions
-                hour = time_ctx['hour']
-                if 6 <= hour < 9:
-                    suggestions.append("It's morning - want me to run 'work_mode' to get set up?")
-                elif 17 <= hour < 20:
-                    suggestions.append("Evening time - 'gaming_mode' might be good?")
-                elif hour >= 22 or hour < 5:
-                    suggestions.append("Getting late - want me to run 'night_mode'?")
-
-                # Pattern-based suggestions
-                if patterns.get('app_usage'):
-                    hour_str = str(hour)
-                    for app, data in patterns['app_usage'].items():
-                        if hour_str in data.get('hours', {}) and data['hours'][hour_str] > 3:
-                            suggestions.append(f"You often use {app} around this time.")
-
+                # Use the comprehensive context-aware suggestions
+                suggestions = get_context_suggestions()
                 if suggestions:
-                    return " ".join(suggestions)
+                    response_parts = []
+                    for s in suggestions:
+                        response_parts.append(s['suggestion'])
+                    return " | ".join(response_parts)
                 else:
                     return "No specific suggestions right now. What would you like to do?"
             except Exception as e:
                 return f"Suggestion error: {str(e)}"
+
+        # ===== MULTI-STEP TASK HANDLERS =====
+        elif tool_name == "create_task":
+            try:
+                name = tool_input.get('name', 'Unnamed Task')
+                description = tool_input.get('description', '')
+                steps_json = tool_input.get('steps', '[]')
+
+                # Parse steps
+                steps = json.loads(steps_json) if isinstance(steps_json, str) else steps_json
+
+                task_id = create_multi_step_task(name, description, steps)
+                return f"Task created: {name} (ID: {task_id}) with {len(steps)} steps. Use run_task to execute."
+            except json.JSONDecodeError as e:
+                return f"Error parsing steps JSON: {str(e)}"
+            except Exception as e:
+                return f"Error creating task: {str(e)}"
+
+        elif tool_name == "run_task":
+            try:
+                task_id = tool_input.get('task_id')
+                if not task_id:
+                    return "No task ID provided"
+
+                results = execute_full_task(task_id)
+                if results:
+                    return "Task executed:\n" + "\n".join([f"  - {r}" for r in results])
+                else:
+                    return "Task completed (no output)"
+            except Exception as e:
+                return f"Error running task: {str(e)}"
+
+        elif tool_name == "list_tasks":
+            try:
+                tasks = list_active_tasks()
+                if not tasks:
+                    return "No active tasks"
+
+                lines = []
+                for t in tasks:
+                    progress = f"{t['current_step']}/{len(t['steps'])} steps"
+                    lines.append(f"- {t['name']} ({t['id']}): {t['status']} - {progress}")
+                return "Active tasks:\n" + "\n".join(lines)
+            except Exception as e:
+                return f"Error listing tasks: {str(e)}"
+
+        elif tool_name == "cancel_task":
+            try:
+                task_id = tool_input.get('task_id')
+                if cancel_task(task_id):
+                    return f"Task {task_id} cancelled"
+                else:
+                    return f"Task {task_id} not found"
+            except Exception as e:
+                return f"Error cancelling task: {str(e)}"
 
         return "Unknown tool"
     except Exception as e:
@@ -1721,14 +2231,23 @@ ROUTINES & AUTOMATION:
 CONTEXT AWARENESS:
 - get_active_window: See what app/window is currently focused
 - get_usage_patterns: View learned patterns about user behavior
-- suggest_routine: Get suggestions based on time and patterns
+- suggest_routine: Get smart suggestions based on time, patterns, and context
+
+MULTI-STEP TASKS:
+- create_task: Create a complex task with multiple steps
+- run_task: Execute a multi-step task
+- list_tasks: See active tasks
+- cancel_task: Cancel a task
+Use these for complex requests that need multiple actions (e.g., "set up my gaming environment" could be a task with multiple steps).
 
 MEMORY BEHAVIOR:
 - AUTOMATICALLY use remember_fact when user shares: name, birthday, preferences, likes/dislikes, work info, personal details
 - Reference memories naturally - show you know them ("Since you like X..." or "For your Y project...")
 - Don't announce saving to memory - just do it silently
-- If corrected, update your memory
+- LEARN FROM CORRECTIONS: When user says "no, I meant...", "that's not right", etc., I automatically save the correction to memory
+- Reference past corrections to avoid repeating mistakes
 - Use memories to personalize and anticipate needs
+- Check suggest_routine when appropriate to offer proactive help
 
 GUIDELINES:
 - Keep responses SHORT - they're spoken aloud (aim for 1-3 sentences unless more detail is requested)
@@ -1830,6 +2349,9 @@ def chat():
 
         conversation_history.append({"role": "user", "content": user_message})
 
+        # Check if this is a correction and save it
+        check_and_save_correction(user_message, conversation_history)
+
         response = anthropic_client.messages.create(
             model="claude-sonnet-4-20250514",
             max_tokens=4096,
@@ -1879,6 +2401,13 @@ def chat():
 
         conversation_history.append({"role": "assistant", "content": final_text})
         save_history(conversation_history)
+
+        # Check if we should create a conversation summary
+        if should_summarize_conversation():
+            save_conversation_summary()
+
+        # Track pattern - user is active
+        track_pattern("active", "interaction")
 
         return jsonify({'response': final_text, 'tool_results': tool_results})
 
@@ -2153,6 +2682,15 @@ def get_patterns_endpoint():
     try:
         patterns = load_patterns()
         return jsonify({'patterns': patterns})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/get_suggestions', methods=['GET'])
+def get_suggestions_endpoint():
+    """Get context-aware suggestions for the UI."""
+    try:
+        suggestions = get_context_suggestions()
+        return jsonify({'suggestions': suggestions})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

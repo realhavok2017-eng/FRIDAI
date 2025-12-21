@@ -24,6 +24,7 @@ user_profile.json
 memory_bank.json
 routines.json
 patterns.json
+active_tasks.json
 
 # Environment
 .env
