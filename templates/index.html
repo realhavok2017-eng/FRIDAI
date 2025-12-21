@@ -3182,22 +3182,6 @@
             }
         };
 
-        // Hook into tool execution to show working state
-        const originalAddToolIndicator = addToolIndicator;
-        addToolIndicator = function(toolName, input, result) {
-            originalAddToolIndicator(toolName, input, result);
-
-            // Show working state when tools are being used
-            const searchTools = ['web_search', 'search', 'lookup', 'find', 'get_'];
-            const isSearching = searchTools.some(t => toolName.toLowerCase().includes(t));
-
-            if (isSearching) {
-                setAvatarState('searching');
-            } else {
-                setAvatarState('working');
-            }
-        };
-
         // Set initial chill state after page loads
         setTimeout(() => {
             if (!currentAvatarState || currentAvatarState === '') {
@@ -3819,11 +3803,22 @@
             }
         }
 
-        // Hook into addToolIndicator to also show in feed
+        // Hook into addToolIndicator to also show in feed and update avatar
         const originalAddToolIndicator = addToolIndicator;
         addToolIndicator = function(toolName, input, result) {
             originalAddToolIndicator(toolName, input, result);
             showToolActivity(toolName, input);
+
+            // Update avatar state based on tool type
+            if (typeof setAvatarState === 'function') {
+                const searchTools = ['web_search', 'search', 'lookup', 'find', 'get_'];
+                const isSearching = searchTools.some(t => toolName.toLowerCase().includes(t));
+                if (isSearching) {
+                    setAvatarState('searching');
+                } else {
+                    setAvatarState('working');
+                }
+            }
         };
     </script>
 </body>
