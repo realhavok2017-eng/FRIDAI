@@ -2121,6 +2121,41 @@ def get_reminders_count():
     """Get count of active reminders."""
     return jsonify({'count': len(active_reminders)})
 
+@app.route('/get_profile', methods=['GET'])
+def get_profile_endpoint():
+    """Get user profile for memory panel."""
+    try:
+        profile = load_user_profile()
+        return jsonify({'profile': profile})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/get_memories', methods=['GET'])
+def get_memories_endpoint():
+    """Get memories for memory panel."""
+    try:
+        memory_bank = load_memory_bank()
+        # Combine all memory types into a single list
+        memories = []
+        for fact in memory_bank.get('facts', []):
+            memories.append({'content': fact.get('content', fact), 'category': 'Fact'})
+        for pref in memory_bank.get('preferences', []):
+            memories.append({'content': pref.get('content', pref), 'category': 'Preference'})
+        for event in memory_bank.get('important_events', []):
+            memories.append({'content': event.get('content', event), 'category': 'Event'})
+        return jsonify({'memories': memories})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/get_patterns', methods=['GET'])
+def get_patterns_endpoint():
+    """Get usage patterns for memory panel."""
+    try:
+        patterns = load_patterns()
+        return jsonify({'patterns': patterns})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 # PWA routes
 @app.route('/manifest.json')
 def manifest():

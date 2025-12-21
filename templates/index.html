@@ -557,6 +557,357 @@
                 gap: 5px;
             }
         }
+
+        /* ============================================
+           NICE TO HAVE - ADVANCED UI
+           ============================================ */
+
+        /* FRIDAY Avatar Orb */
+        .friday-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #00ffff, #0066cc, #003366);
+            box-shadow: 0 0 20px rgba(0, 217, 255, 0.5), inset 0 0 20px rgba(255,255,255,0.1);
+            position: relative;
+            margin: 0 auto 10px;
+            transition: all 0.3s ease;
+        }
+
+        .friday-avatar::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 30px;
+            height: 30px;
+            background: radial-gradient(circle, rgba(255,255,255,0.8), transparent);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .friday-avatar::after {
+            content: '';
+            position: absolute;
+            top: -5px;
+            left: -5px;
+            right: -5px;
+            bottom: -5px;
+            border-radius: 50%;
+            border: 2px solid rgba(0, 217, 255, 0.3);
+            animation: orbit 3s linear infinite;
+        }
+
+        @keyframes orbit {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .friday-avatar.listening {
+            animation: pulse-avatar 1.5s ease-in-out infinite;
+            box-shadow: 0 0 30px rgba(0, 255, 136, 0.6), inset 0 0 20px rgba(255,255,255,0.2);
+            background: radial-gradient(circle at 30% 30%, #00ff88, #00cc66, #006633);
+        }
+
+        .friday-avatar.thinking {
+            animation: think-pulse 0.8s ease-in-out infinite;
+            box-shadow: 0 0 30px rgba(102, 126, 234, 0.6), inset 0 0 20px rgba(255,255,255,0.2);
+            background: radial-gradient(circle at 30% 30%, #667eea, #764ba2, #4a2c7a);
+        }
+
+        .friday-avatar.speaking {
+            animation: speak-pulse 0.3s ease-in-out infinite alternate;
+            box-shadow: 0 0 40px rgba(255, 65, 108, 0.6), inset 0 0 20px rgba(255,255,255,0.2);
+            background: radial-gradient(circle at 30% 30%, #ff416c, #ff4b2b, #cc3322);
+        }
+
+        @keyframes pulse-avatar {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.05); opacity: 0.9; }
+        }
+
+        @keyframes think-pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.08); }
+        }
+
+        @keyframes speak-pulse {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.1); }
+        }
+
+        .avatar-status {
+            text-align: center;
+            font-size: 0.75em;
+            color: #888;
+            margin-top: 5px;
+        }
+
+        /* Memory Panel (Slide-out) */
+        .memory-panel {
+            position: fixed;
+            top: 0;
+            right: -320px;
+            width: 300px;
+            height: 100%;
+            background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+            border-left: 1px solid rgba(0, 217, 255, 0.3);
+            z-index: 999;
+            transition: right 0.3s ease;
+            overflow-y: auto;
+            padding: 20px;
+            padding-top: calc(20px + env(safe-area-inset-top));
+        }
+
+        .memory-panel.open {
+            right: 0;
+        }
+
+        .memory-panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(0, 217, 255, 0.2);
+        }
+
+        .memory-panel-header h3 {
+            color: #00d9ff;
+            font-size: 1.1em;
+            margin: 0;
+        }
+
+        .memory-panel-close {
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 1.5em;
+            cursor: pointer;
+        }
+
+        .memory-section {
+            margin-bottom: 20px;
+        }
+
+        .memory-section h4 {
+            color: #00ff88;
+            font-size: 0.85em;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        .memory-item {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 8px;
+            font-size: 0.85em;
+            color: #ccc;
+        }
+
+        .memory-panel-toggle {
+            position: fixed;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(0, 217, 255, 0.2);
+            border: 1px solid rgba(0, 217, 255, 0.4);
+            color: #00d9ff;
+            padding: 10px 8px;
+            border-radius: 8px 0 0 8px;
+            cursor: pointer;
+            z-index: 998;
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            font-size: 0.8em;
+        }
+
+        /* Pattern Stats */
+        .pattern-stats {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 10px;
+            display: none;
+        }
+
+        .pattern-stats.visible {
+            display: block;
+        }
+
+        .pattern-stats-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .pattern-stats-header h4 {
+            color: #00d9ff;
+            font-size: 0.85em;
+            margin: 0;
+        }
+
+        .pattern-stats-toggle {
+            background: none;
+            border: none;
+            color: #888;
+            cursor: pointer;
+            font-size: 0.8em;
+        }
+
+        .pattern-bar {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .pattern-bar .label {
+            width: 80px;
+            font-size: 0.75em;
+            color: #888;
+        }
+
+        .pattern-bar .bar-container {
+            flex: 1;
+            height: 8px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .pattern-bar .bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00d9ff, #00ff88);
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+
+        .pattern-bar .value {
+            width: 40px;
+            text-align: right;
+            font-size: 0.75em;
+            color: #00ff88;
+        }
+
+        /* Tool Activity Feed */
+        .tool-feed {
+            position: fixed;
+            bottom: 20px;
+            left: 10px;
+            max-width: 250px;
+            z-index: 100;
+            pointer-events: none;
+        }
+
+        .tool-activity {
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid rgba(0, 217, 255, 0.4);
+            border-radius: 8px;
+            padding: 8px 12px;
+            margin-bottom: 5px;
+            font-size: 0.75em;
+            color: #00d9ff;
+            animation: tool-slide-in 0.3s ease, tool-fade-out 0.5s ease 3s forwards;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tool-activity .tool-icon {
+            font-size: 1.2em;
+        }
+
+        @keyframes tool-slide-in {
+            from { transform: translateX(-100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes tool-fade-out {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+
+        /* Theme Toggle */
+        .theme-toggle {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white;
+            padding: 6px 10px;
+            border-radius: 15px;
+            font-size: 0.75em;
+            cursor: pointer;
+        }
+
+        /* Iron Man Theme */
+        body.theme-ironman {
+            background: linear-gradient(135deg, #1a0a0a 0%, #2d1515 50%, #0a0a1a 100%);
+        }
+
+        body.theme-ironman .friday-avatar {
+            background: radial-gradient(circle at 30% 30%, #ff4444, #cc0000, #660000);
+            box-shadow: 0 0 30px rgba(255, 68, 68, 0.5), inset 0 0 20px rgba(255,200,100,0.2);
+        }
+
+        body.theme-ironman header h1 {
+            background: linear-gradient(90deg, #ff4444, #ffcc00);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        body.theme-ironman .status-item .value {
+            color: #ff6644;
+        }
+
+        body.theme-ironman .quick-action-btn {
+            border-color: rgba(255, 68, 68, 0.4);
+            background: rgba(255, 68, 68, 0.1);
+        }
+
+        body.theme-ironman .context-indicator {
+            border-color: rgba(255, 68, 68, 0.3);
+            background: rgba(255, 68, 68, 0.1);
+        }
+
+        body.theme-ironman .context-indicator .greeting {
+            color: #ffcc00;
+        }
+
+        /* Arc Reactor Theme */
+        body.theme-arc {
+            background: linear-gradient(135deg, #0a1a2a 0%, #102030 50%, #051015 100%);
+        }
+
+        body.theme-arc .friday-avatar {
+            background: radial-gradient(circle at 50% 50%, #ffffff, #00ffff, #0066cc, #003366);
+            box-shadow: 0 0 50px rgba(0, 255, 255, 0.8), inset 0 0 30px rgba(255,255,255,0.5);
+        }
+
+        body.theme-arc .friday-avatar::before {
+            width: 20px;
+            height: 20px;
+            background: #fff;
+            box-shadow: 0 0 20px #fff;
+        }
+
+        /* Responsive */
+        @media (max-width: 480px) {
+            .memory-panel {
+                width: 85%;
+                right: -90%;
+            }
+            .tool-feed {
+                display: none;
+            }
+            .friday-avatar {
+                width: 50px;
+                height: 50px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -566,14 +917,43 @@
         <button class="alert-close" onclick="dismissAlert()">×</button>
     </div>
 
+    <!-- Memory Panel (Slide-out) -->
+    <div class="memory-panel" id="memoryPanel">
+        <div class="memory-panel-header">
+            <h3>🧠 What I Know</h3>
+            <button class="memory-panel-close" onclick="toggleMemoryPanel()">×</button>
+        </div>
+        <div class="memory-section" id="profileSection">
+            <h4>Your Profile</h4>
+            <div id="profileContent">Loading...</div>
+        </div>
+        <div class="memory-section" id="memoriesSection">
+            <h4>Things I Remember</h4>
+            <div id="memoriesContent">Loading...</div>
+        </div>
+        <div class="memory-section" id="patternsSection">
+            <h4>Your Patterns</h4>
+            <div id="patternsContent">Loading...</div>
+        </div>
+    </div>
+    <button class="memory-panel-toggle" onclick="toggleMemoryPanel()">🧠 Memory</button>
+
+    <!-- Tool Activity Feed -->
+    <div class="tool-feed" id="toolFeed"></div>
+
     <div class="container">
         <header>
+            <button class="theme-toggle" onclick="cycleTheme()" id="themeToggle">🎨 Theme</button>
             <h1>F.R.I.D.A.I.</h1>
             <div class="listening-indicator" id="listeningIndicator">
                 <div class="listening-dot"></div>
                 <span>Always Listening</span>
             </div>
         </header>
+
+        <!-- FRIDAY Avatar -->
+        <div class="friday-avatar" id="fridayAvatar"></div>
+        <div class="avatar-status" id="avatarStatus">Ready</div>
 
         <!-- Context Indicator -->
         <div class="context-indicator" id="contextIndicator">
@@ -1718,6 +2098,230 @@
 
         // Start updates when page loads
         setTimeout(startPeriodicUpdates, 2000);
+
+        // ============================================
+        // NICE TO HAVE - ADVANCED FUNCTIONALITY
+        // ============================================
+
+        // Memory Panel Toggle
+        function toggleMemoryPanel() {
+            const panel = document.getElementById('memoryPanel');
+            panel.classList.toggle('open');
+
+            if (panel.classList.contains('open')) {
+                loadMemoryPanelContent();
+            }
+        }
+
+        // Load memory panel content
+        async function loadMemoryPanelContent() {
+            try {
+                // Load profile
+                const profileContent = document.getElementById('profileContent');
+                const memoriesContent = document.getElementById('memoriesContent');
+                const patternsContent = document.getElementById('patternsContent');
+
+                // Fetch profile via chat (or direct endpoint if available)
+                const profileRes = await fetch('/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: 'get_profile_silent', silent: true })
+                });
+
+                // For now, display from local storage or show placeholder
+                profileContent.innerHTML = `
+                    <div class="memory-item">Loading profile data...</div>
+                `;
+
+                // Try to fetch actual profile data
+                try {
+                    const res = await fetch('/get_profile');
+                    const data = await res.json();
+                    if (data.profile) {
+                        let profileHtml = '';
+                        if (data.profile.preferred_name) {
+                            profileHtml += `<div class="memory-item"><strong>Name:</strong> ${data.profile.preferred_name}</div>`;
+                        }
+                        if (data.profile.interests && data.profile.interests.length > 0) {
+                            profileHtml += `<div class="memory-item"><strong>Interests:</strong> ${data.profile.interests.join(', ')}</div>`;
+                        }
+                        if (data.profile.preferences) {
+                            profileHtml += `<div class="memory-item"><strong>Preferences:</strong> ${JSON.stringify(data.profile.preferences)}</div>`;
+                        }
+                        profileContent.innerHTML = profileHtml || '<div class="memory-item">No profile data yet</div>';
+                    }
+                } catch (e) {
+                    profileContent.innerHTML = '<div class="memory-item">Ask me about yourself to start building your profile!</div>';
+                }
+
+                // Fetch memories
+                try {
+                    const res = await fetch('/get_memories');
+                    const data = await res.json();
+                    if (data.memories && data.memories.length > 0) {
+                        memoriesContent.innerHTML = data.memories.slice(0, 10).map(m =>
+                            `<div class="memory-item">${m.category ? `<strong>[${m.category}]</strong> ` : ''}${m.content}</div>`
+                        ).join('');
+                    } else {
+                        memoriesContent.innerHTML = '<div class="memory-item">No memories saved yet. Tell me things to remember!</div>';
+                    }
+                } catch (e) {
+                    memoriesContent.innerHTML = '<div class="memory-item">Tell me things to remember!</div>';
+                }
+
+                // Fetch patterns
+                try {
+                    const res = await fetch('/get_patterns');
+                    const data = await res.json();
+                    if (data.patterns) {
+                        let patternHtml = '';
+                        if (data.patterns.app_usage) {
+                            const apps = Object.entries(data.patterns.app_usage)
+                                .sort((a, b) => b[1] - a[1])
+                                .slice(0, 5);
+                            if (apps.length > 0) {
+                                patternHtml += '<div class="memory-item"><strong>Top Apps:</strong><br>' +
+                                    apps.map(([app, count]) => `${app}: ${count}x`).join('<br>') + '</div>';
+                            }
+                        }
+                        if (data.patterns.active_hours) {
+                            const hours = Object.entries(data.patterns.active_hours)
+                                .sort((a, b) => b[1] - a[1])
+                                .slice(0, 3);
+                            if (hours.length > 0) {
+                                patternHtml += '<div class="memory-item"><strong>Active Hours:</strong> ' +
+                                    hours.map(([h, c]) => `${h}:00 (${c}x)`).join(', ') + '</div>';
+                            }
+                        }
+                        patternsContent.innerHTML = patternHtml || '<div class="memory-item">Use FRIDAY more to build patterns!</div>';
+                    }
+                } catch (e) {
+                    patternsContent.innerHTML = '<div class="memory-item">Use FRIDAY more to build patterns!</div>';
+                }
+            } catch (e) {
+                console.error('Error loading memory panel:', e);
+            }
+        }
+
+        // Theme cycling
+        let currentTheme = localStorage.getItem('fridayTheme') || 'default';
+        const themes = ['default', 'ironman', 'arc'];
+
+        function cycleTheme() {
+            const currentIndex = themes.indexOf(currentTheme);
+            currentTheme = themes[(currentIndex + 1) % themes.length];
+
+            // Remove all theme classes
+            document.body.classList.remove('theme-ironman', 'theme-arc');
+
+            // Add new theme class
+            if (currentTheme !== 'default') {
+                document.body.classList.add('theme-' + currentTheme);
+            }
+
+            // Update button text
+            const themeNames = { 'default': 'Default', 'ironman': 'Iron Man', 'arc': 'Arc Reactor' };
+            document.getElementById('themeToggle').textContent = '🎨 ' + themeNames[currentTheme];
+
+            // Save preference
+            localStorage.setItem('fridayTheme', currentTheme);
+        }
+
+        // Load saved theme on startup
+        function loadTheme() {
+            const savedTheme = localStorage.getItem('fridayTheme');
+            if (savedTheme && savedTheme !== 'default') {
+                currentTheme = savedTheme;
+                document.body.classList.add('theme-' + savedTheme);
+                const themeNames = { 'default': 'Default', 'ironman': 'Iron Man', 'arc': 'Arc Reactor' };
+                document.getElementById('themeToggle').textContent = '🎨 ' + themeNames[savedTheme];
+            }
+        }
+        loadTheme();
+
+        // Avatar State Management
+        function setAvatarState(state) {
+            const avatar = document.getElementById('fridayAvatar');
+            const statusEl = document.getElementById('avatarStatus');
+
+            // Remove all states
+            avatar.classList.remove('listening', 'thinking', 'speaking');
+
+            // Add new state
+            if (state) {
+                avatar.classList.add(state);
+            }
+
+            // Update status text
+            const statusTexts = {
+                '': 'Ready',
+                'listening': 'Listening...',
+                'thinking': 'Thinking...',
+                'speaking': 'Speaking...'
+            };
+            statusEl.textContent = statusTexts[state] || 'Ready';
+        }
+
+        // Hook into existing functions to update avatar state
+        const originalSetStatus = setStatus;
+        setStatus = function(text) {
+            originalSetStatus(text);
+
+            // Update avatar based on status
+            if (text.includes('Listening')) {
+                setAvatarState('listening');
+            } else if (text.includes('thinking') || text.includes('Processing')) {
+                setAvatarState('thinking');
+            } else if (text.includes('Speaking')) {
+                setAvatarState('speaking');
+            } else {
+                setAvatarState('');
+            }
+        };
+
+        // Tool Activity Feed
+        function showToolActivity(toolName, input) {
+            const feed = document.getElementById('toolFeed');
+            const activity = document.createElement('div');
+            activity.className = 'tool-activity';
+
+            // Map tool names to icons
+            const icons = {
+                'spotify_control': '🎵',
+                'open_app': '📱',
+                'set_volume': '🔊',
+                'run_routine': '⚡',
+                'set_reminder': '⏰',
+                'remember_fact': '🧠',
+                'web_search': '🔍',
+                'take_screenshot': '📸',
+                'lock_screen': '🔒',
+                'get_system_stats': '📊',
+                'default': '🔧'
+            };
+
+            const icon = icons[toolName] || icons['default'];
+            activity.innerHTML = `<span class="tool-icon">${icon}</span><span>${toolName}</span>`;
+
+            feed.appendChild(activity);
+
+            // Remove after animation
+            setTimeout(() => {
+                activity.remove();
+            }, 3500);
+
+            // Keep only last 3 items
+            while (feed.children.length > 3) {
+                feed.firstChild.remove();
+            }
+        }
+
+        // Hook into addToolIndicator to also show in feed
+        const originalAddToolIndicator = addToolIndicator;
+        addToolIndicator = function(toolName, input, result) {
+            originalAddToolIndicator(toolName, input, result);
+            showToolActivity(toolName, input);
+        };
     </script>
 </body>
 </html>
