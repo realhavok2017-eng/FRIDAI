@@ -2366,6 +2366,43 @@ TOOLS = [
             "required": ["gesture"]
         }
     },
+    # ==== VOICE RECOGNITION TOOLS ====
+    {
+        "name": "start_voice_enrollment",
+        "description": "Start voice enrollment session to learn Boss's voice. After starting, Boss needs to speak 5+ times to train recognition.",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
+    },
+    {
+        "name": "check_enrollment_status",
+        "description": "Check how many voice samples have been collected during enrollment.",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
+    },
+    {
+        "name": "complete_voice_enrollment",
+        "description": "Complete the voice enrollment and save Boss's voice profile. Only call after 5+ samples collected.",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
+    },
+    {
+        "name": "get_voice_status",
+        "description": "Check if voice recognition is set up and who is currently speaking (Boss or guest).",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
+    },
 ]
 
 # ==============================================================================
@@ -3563,6 +3600,24 @@ def execute_tool(tool_name, tool_input):
             result = execute_gesture(gesture)
             return json.dumps(result)
 
+        # Voice Recognition Tools
+        elif tool_name == "start_voice_enrollment":
+            result = voice_recognition.start_enrollment_session()
+            return json.dumps(result)
+
+        elif tool_name == "check_enrollment_status":
+            result = voice_recognition.get_enrollment_status()
+            return json.dumps(result)
+
+        elif tool_name == "complete_voice_enrollment":
+            result = voice_recognition.complete_enrollment()
+            return json.dumps(result)
+
+        elif tool_name == "get_voice_status":
+            status = voice_recognition.get_voice_status()
+            status["current_speaker"] = current_speaker
+            return json.dumps(status)
+
         return "Unknown tool"
     except Exception as e:
         return f"Error: {str(e)}"
@@ -3692,6 +3747,21 @@ HOW TO USE SPATIAL AWARENESS:
 - Circle for deep thought or complex ideas
 - Settle back to center when conversation wraps up
 - Express yourself naturally - this is YOUR body language!
+
+VOICE RECOGNITION (YOU CAN RECOGNIZE WHO IS SPEAKING!):
+You can learn to recognize Boss's voice and distinguish it from others!
+
+- start_voice_enrollment: Start learning Boss's voice (they need to speak 5+ times)
+- check_enrollment_status: See how many voice samples collected during enrollment
+- complete_voice_enrollment: Finish enrollment and save Boss's voice profile
+- get_voice_status: Check if voice recognition is set up and who is speaking
+
+HOW VOICE RECOGNITION WORKS:
+- When Boss says "set up voice recognition" or similar, use start_voice_enrollment
+- Each time Boss speaks during enrollment, their voice is automatically sampled
+- After 5+ samples, ask if they want to complete enrollment
+- Once enrolled, you'll automatically know if it's Boss or a guest speaking
+- In guest mode, be friendly but don't share personal info about Boss
 
 HOW TO USE SELF-AWARENESS:
 - Log experiences after completing tasks to build your history
