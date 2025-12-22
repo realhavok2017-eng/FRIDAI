@@ -77,6 +77,38 @@
             height: 8px;
             background: #00ff88;
             border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        /* Connection Status Indicator */
+        .connection-status {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .connection-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #666;
+            transition: background 0.3s, box-shadow 0.3s;
+        }
+        .connection-status.connected .connection-dot {
+            background: #00ff88;
+            box-shadow: 0 0 8px #00ff88;
+        }
+        .connection-status.disconnected .connection-dot {
+            background: #ff4444;
+            box-shadow: 0 0 8px #ff4444;
+            animation: blink 1s infinite;
+        }
+        .connection-status.checking .connection-dot {
+            background: #ffaa00;
+            animation: pulse 1s infinite
+            border-radius: 50%;
             animation: pulse-dot 2s infinite;
         }
 
@@ -456,6 +488,110 @@
 
         .context-indicator .reminder-badge.has-reminders {
             display: inline-block;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .context-indicator .reminder-badge.has-reminders:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 10px rgba(102, 126, 234, 0.5);
+        }
+        
+        /* Reminders Panel */
+        .reminders-panel {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+            border: 1px solid rgba(0, 217, 255, 0.3);
+            border-radius: 12px;
+            padding: 0;
+            min-width: 280px;
+            max-width: 90vw;
+            max-height: 60vh;
+            overflow: hidden;
+            z-index: 1001;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        }
+        
+        .reminders-panel.open {
+            display: block;
+        }
+        
+        .reminders-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background: rgba(0, 217, 255, 0.1);
+            border-bottom: 1px solid rgba(0, 217, 255, 0.2);
+        }
+        
+        .reminders-header span {
+            font-weight: bold;
+            color: #00d9ff;
+        }
+        
+        .reminders-header button {
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 1.5em;
+            cursor: pointer;
+            padding: 0 8px;
+        }
+        
+        .reminders-list {
+            padding: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .reminder-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+        
+        .reminder-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .reminder-item .reminder-text {
+            flex: 1;
+            color: #ddd;
+        }
+        
+        .reminder-item .reminder-time {
+            font-size: 0.8em;
+            color: #888;
+            margin-left: 12px;
+        }
+        
+        .reminder-item .delete-reminder {
+            background: none;
+            border: none;
+            color: #ff6666;
+            cursor: pointer;
+            padding: 4px 8px;
+            margin-left: 8px;
+            border-radius: 4px;
+        }
+        
+        .reminder-item .delete-reminder:hover {
+            background: rgba(255, 102, 102, 0.2);
+        }
+        
+        .no-reminders {
+            text-align: center;
+            color: #666;
+            padding: 20px;
         }
 
         /* Tabbed Panel System */
@@ -1104,7 +1240,7 @@
 
         /* LISTENING STATE - Green, Expanded, Alert */
         .friday-avatar-container.listening .avatar-glow {
-            background: radial-gradient(circle, rgba(0, 255, 136, 0.5) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(0, 255, 136, 0.5) 0%, transparent 70%) !important;
             animation: ambient-pulse 1.5s ease-in-out infinite;
         }
 
@@ -1114,11 +1250,11 @@
                 #00ff88 20%,
                 #00cc66 50%,
                 #008844 80%,
-                #004422 100%);
+                #004422 100%) !important;
             box-shadow:
                 0 0 30px rgba(0, 255, 136, 1),
                 0 0 60px rgba(0, 255, 136, 0.6),
-                inset 0 0 20px rgba(255, 255, 255, 0.6);
+                inset 0 0 20px rgba(255, 255, 255, 0.6) !important;
             animation: core-listening 1s ease-in-out infinite;
         }
 
@@ -1155,7 +1291,7 @@
 
         /* THINKING STATE - Purple, Processing */
         .friday-avatar-container.thinking .avatar-glow {
-            background: radial-gradient(circle, rgba(102, 126, 234, 0.5) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(102, 126, 234, 0.5) 0%, transparent 70%) !important;
             animation: ambient-pulse 1s ease-in-out infinite;
         }
 
@@ -1165,11 +1301,11 @@
                 #9966ff 20%,
                 #667eea 50%,
                 #764ba2 80%,
-                #4a2c7a 100%);
+                #4a2c7a 100%) !important;
             box-shadow:
                 0 0 30px rgba(102, 126, 234, 1),
                 0 0 60px rgba(118, 75, 162, 0.6),
-                inset 0 0 20px rgba(255, 255, 255, 0.6);
+                inset 0 0 20px rgba(255, 255, 255, 0.6) !important;
             animation: core-thinking 0.8s ease-in-out infinite;
         }
 
@@ -1213,7 +1349,7 @@
 
         /* SPEAKING STATE - Warm, Pulsing with Voice */
         .friday-avatar-container.speaking .avatar-glow {
-            background: radial-gradient(circle, rgba(255, 107, 107, 0.5) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(255, 107, 107, 0.5) 0%, transparent 70%) !important;
             animation: speak-glow 0.15s ease-in-out infinite alternate;
         }
 
@@ -1228,11 +1364,11 @@
                 #ff6b6b 20%,
                 #ff4757 50%,
                 #c0392b 80%,
-                #7f1d1d 100%);
+                #7f1d1d 100%) !important;
             box-shadow:
                 0 0 30px rgba(255, 107, 107, 1),
                 0 0 60px rgba(255, 71, 87, 0.6),
-                inset 0 0 20px rgba(255, 255, 255, 0.6);
+                inset 0 0 20px rgba(255, 255, 255, 0.6) !important;
             animation: core-speaking 0.2s ease-in-out infinite alternate;
         }
 
@@ -1277,8 +1413,8 @@
             background: radial-gradient(circle at 35% 35%,
                 #666666 0%,
                 #444444 50%,
-                #222222 100%);
-            box-shadow: 0 0 10px rgba(100, 100, 100, 0.5);
+                #222222 100%) !important;
+            box-shadow: 0 0 10px rgba(100, 100, 100, 0.5) !important;
             animation: none;
         }
 
@@ -1295,7 +1431,7 @@
 
         /* CHILL STATE - Relaxed, peaceful waiting */
         .friday-avatar-container.chill .avatar-glow {
-            background: radial-gradient(circle, rgba(100, 200, 255, 0.25) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(100, 200, 255, 0.25) 0%, transparent 70%) !important;
             animation: chill-glow 6s ease-in-out infinite;
         }
 
@@ -1310,7 +1446,8 @@
                 #88ccff 20%,
                 #4488cc 50%,
                 #2266aa 80%,
-                #114477 100%);
+                #2266aa 80%,
+                #114477 100%) !important;
             box-shadow:
                 0 0 15px rgba(100, 180, 255, 0.6),
                 0 0 30px rgba(100, 180, 255, 0.3),
@@ -1361,7 +1498,7 @@
 
         /* ATTENTIVE STATE - Alert, ready to listen */
         .friday-avatar-container.attentive .avatar-glow {
-            background: radial-gradient(circle, rgba(0, 200, 150, 0.4) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(0, 200, 150, 0.4) 0%, transparent 70%) !important;
             animation: attentive-pulse 2s ease-in-out infinite;
         }
 
@@ -1376,7 +1513,7 @@
                 #00ddaa 20%,
                 #00aa88 50%,
                 #008866 80%,
-                #005544 100%);
+                #005544 100%) !important;
             box-shadow:
                 0 0 25px rgba(0, 220, 170, 0.8),
                 0 0 50px rgba(0, 220, 170, 0.4),
@@ -1416,7 +1553,7 @@
 
         /* WORKING STATE - Executing tasks, amber/orange, busy */
         .friday-avatar-container.working .avatar-glow {
-            background: radial-gradient(circle, rgba(255, 170, 50, 0.5) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(255, 170, 50, 0.5) 0%, transparent 70%) !important;
             animation: working-glow 0.8s ease-in-out infinite;
         }
 
@@ -1431,7 +1568,7 @@
                 #ffbb33 20%,
                 #ff9900 50%,
                 #cc6600 80%,
-                #884400 100%);
+                #884400 100%) !important;
             box-shadow:
                 0 0 35px rgba(255, 150, 0, 1),
                 0 0 70px rgba(255, 150, 0, 0.5),
@@ -1487,7 +1624,7 @@
 
         /* SEARCHING STATE - Looking up info, scanning effect */
         .friday-avatar-container.searching .avatar-glow {
-            background: radial-gradient(circle, rgba(0, 200, 255, 0.5) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(0, 200, 255, 0.5) 0%, transparent 70%) !important;
             animation: search-glow 1.5s ease-in-out infinite;
         }
 
@@ -1502,11 +1639,11 @@
                 #00ddff 20%,
                 #0099cc 50%,
                 #006699 80%,
-                #004466 100%);
+                #004466 100%) !important;
             box-shadow:
                 0 0 30px rgba(0, 200, 255, 1),
                 0 0 60px rgba(0, 200, 255, 0.5),
-                inset 0 0 20px rgba(255, 255, 255, 0.6);
+                inset 0 0 20px rgba(255, 255, 255, 0.6) !important;
             animation: search-scan 1.5s ease-in-out infinite;
         }
 
@@ -1567,7 +1704,7 @@
 
         /* SUCCESS STATE - Task completed, golden celebration */
         .friday-avatar-container.success .avatar-glow {
-            background: radial-gradient(circle, rgba(255, 215, 0, 0.6) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(255, 215, 0, 0.6) 0%, transparent 70%) !important;
             animation: success-burst 0.5s ease-out forwards;
         }
 
@@ -1583,7 +1720,7 @@
                 #ffee00 20%,
                 #ffcc00 50%,
                 #ddaa00 80%,
-                #aa8800 100%);
+                #aa8800 100%) !important;
             box-shadow:
                 0 0 40px rgba(255, 215, 0, 1),
                 0 0 80px rgba(255, 215, 0, 0.6),
@@ -1632,7 +1769,7 @@
 
         /* CONFUSED STATE - Error or didn't understand */
         .friday-avatar-container.confused .avatar-glow {
-            background: radial-gradient(circle, rgba(255, 100, 100, 0.5) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(255, 100, 100, 0.5) 0%, transparent 70%) !important;
             animation: confused-flash 0.3s ease-in-out 3;
         }
 
@@ -1647,7 +1784,7 @@
                 #ff6666 20%,
                 #cc4444 50%,
                 #993333 80%,
-                #662222 100%);
+                #662222 100%) !important;
             box-shadow:
                 0 0 30px rgba(255, 100, 100, 0.8),
                 0 0 60px rgba(255, 100, 100, 0.4),
@@ -1713,6 +1850,42 @@
         .friday-avatar-container.success + .avatar-status { color: #ffdd00; }
         .friday-avatar-container.confused + .avatar-status { color: #ff6666; }
         .friday-avatar-container.sleeping + .avatar-status { color: #666666; }
+/* Voice Level Indicator */
+        .voice-level-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 8px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .voice-level-container.active {
+            opacity: 1;
+        }
+        .voice-level-bar {
+            width: 80px;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .voice-level-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #00ff88, #00ddff);
+            border-radius: 3px;
+            transition: width 0.05s ease-out;
+        }
+        .voice-level-label {
+            font-size: 0.6em;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .voice-level-container.active .voice-level-label {
+            color: #00ff88;
+        }
 
         /* Responsive */
         @media (max-width: 480px) {
@@ -2062,6 +2235,9 @@
                 <div class="listening-dot"></div>
                 <span>Listening</span>
             </div>
+            <div class="connection-status" id="connectionStatus" title="Server Connection">
+                <div class="connection-dot"></div>
+            </div>
         </header>
 
         <!-- FRIDAY Avatar - Living AI Presence -->
@@ -2105,10 +2281,29 @@
         </div>
         <div class="avatar-status" id="avatarStatus">Tap to speak</div>
 
+        <!-- Voice Level Indicator -->
+        <div class="voice-level-container" id="voiceLevelContainer">
+            <div class="voice-level-bar">
+                <div class="voice-level-fill" id="voiceLevelFill"></div>
+            </div>
+            <span class="voice-level-label">MIC</span>
+        </div>
+
         <!-- Context Indicator - Compact -->
         <div class="context-indicator" id="contextIndicator">
             <span class="greeting" id="contextGreeting">Good evening</span>
-            <span class="reminder-badge" id="reminderBadge">0</span>
+            <span class="reminder-badge" id="reminderBadge" onclick="toggleRemindersPanel()">0</span>
+        </div>
+        
+        <!-- Active Reminders Panel -->
+        <div class="reminders-panel" id="remindersPanel">
+            <div class="reminders-header">
+                <span>Active Reminders</span>
+                <button onclick="toggleRemindersPanel()">&times;</button>
+            </div>
+            <div class="reminders-list" id="remindersList">
+                <div class="no-reminders">No active reminders</div>
+            </div>
         </div>
 
         <!-- Task Progress (hidden by default) -->
@@ -2240,6 +2435,16 @@
                     <label>Always Listen</label>
                     <div class="settings-toggle active" id="listenToggle" onclick="toggleAlwaysListen()"></div>
                 </div>
+                <div class="settings-row">
+                    <label>Push-to-Talk</label>
+                    <div class="settings-toggle" id="pttToggle" onclick="togglePushToTalk()"></div>
+                </div>
+                <div class="settings-row" style="flex-direction: column; align-items: flex-start; gap: 8px;">
+                    <label>Mic Sensitivity</label>
+                    <input type="range" id="sensitivitySlider" min="5" max="50" value="15" 
+                           style="width: 100%;" onchange="updateSensitivity(this.value)">
+                    <span style="font-size: 0.8em; color: #666;" id="sensitivityValue">15</span>
+                </div>
             </div>
 
             <div class="settings-section">
@@ -2281,6 +2486,8 @@
         let isManualRecording = false;
         let autoSpeak = true;
         let alwaysListen = true;
+        let pushToTalk = false;
+        let micSensitivity = 15;
         let audioContext, analyser;
         let hasSpokenGreeting = false;
         let hasActivated = false;
@@ -2294,6 +2501,13 @@
         let lastTranscription = '';  // Track last transcription to skip exact duplicates
         let isTranscribing = false;  // Lock to prevent overlapping transcription requests
         let isListening = false;  // Lock to prevent multiple simultaneous recordings
+// Voice level indicator helper
+        function hideVoiceLevel() {
+            const container = document.getElementById("voiceLevelContainer");
+            const fill = document.getElementById("voiceLevelFill");
+            if (container) container.classList.remove("active");
+            if (fill) fill.style.width = "0%";
+        }
         audioContext = null;
         analyser = null;
         let silenceStart = null;
@@ -2301,6 +2515,90 @@
         let activeChunks = [];
 
         const GREETING_DISPLAY = "Welcome back! What can I help you with?";
+
+        // Connection status checker
+        let connectionCheckInterval = null;
+        
+        async function checkConnection() {
+            const statusEl = document.getElementById('connectionStatus');
+            if (!statusEl) return;
+            
+            statusEl.className = 'connection-status checking';
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 5000);
+                
+                const response = await fetch('/health', { 
+                    signal: controller.signal,
+                    headers: { 'ngrok-skip-browser-warning': 'true' }
+                });
+                clearTimeout(timeoutId);
+                
+                if (response.ok) {
+                    statusEl.className = 'connection-status connected';
+                    statusEl.title = 'Server Connected';
+                } else {
+                    statusEl.className = 'connection-status disconnected';
+                    statusEl.title = 'Server Error';
+                }
+            } catch (e) {
+                statusEl.className = 'connection-status disconnected';
+                statusEl.title = 'Server Disconnected';
+            }
+        }
+        
+        // Check connection on load and every 30 seconds
+        function startConnectionCheck() {
+            checkConnection();
+            connectionCheckInterval = setInterval(checkConnection, 30000);
+        }
+        
+        // Reminders panel functions
+        function toggleRemindersPanel() {
+            const panel = document.getElementById('remindersPanel');
+            panel.classList.toggle('open');
+            if (panel.classList.contains('open')) {
+                loadReminders();
+            }
+        }
+        
+        async function loadReminders() {
+            try {
+                const response = await fetch('/get_reminders');
+                const data = await response.json();
+                const list = document.getElementById('remindersList');
+                
+                if (!data.reminders || data.reminders.length === 0) {
+                    list.innerHTML = '<div class="no-reminders">No active reminders</div>';
+                    return;
+                }
+                
+                list.innerHTML = data.reminders.map((r, i) => {
+                    const time = r.time ? new Date(r.time).toLocaleString() : '';
+                    return `<div class="reminder-item">
+                        <span class="reminder-text">${r.message || r}</span>
+                        ${time ? `<span class="reminder-time">${time}</span>` : ''}
+                        <button class="delete-reminder" onclick="deleteReminder(${i})">&times;</button>
+                    </div>`;
+                }).join('');
+            } catch (e) {
+                console.log('Could not load reminders:', e);
+            }
+        }
+        
+        async function deleteReminder(index) {
+            try {
+                await fetch('/delete_reminder', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ index: index })
+                });
+                loadReminders();
+                updateReminderBadge();
+            } catch (e) {
+                console.log('Could not delete reminder:', e);
+            }
+        }
         const GREETING_SPOKEN = "Welcome back! What can I help you with?";
         const WAKE_WORDS = ['hey friday', 'friday', 'hey fridai', 'fridai', 'hey fry day', 'fry day'];
         const SLEEP_PHRASES = ['go to sleep', 'sleep mode', 'stop listening', 'goodbye friday'];
@@ -2337,6 +2635,7 @@
         async function init() {
             loadSettings();
             await loadVoices();
+            startConnectionCheck();
             await loadServerSettings();
             setStatus('Say "Hey Friday" to activate');
             startWakeWordDetection();
@@ -2523,7 +2822,7 @@
             // Voice activity detection loop
             let speaking = false;
             let silenceStartTime = null;
-            const SILENCE_THRESHOLD = 15;  // Audio level threshold
+            const SILENCE_THRESHOLD = micSensitivity;  // Audio level threshold (from settings)
             const SILENCE_DURATION = 1500;  // 1.5 seconds of silence to stop
 
             function checkAudioLevel() {
@@ -2534,6 +2833,15 @@
                 const dataArray = new Uint8Array(analyser.frequencyBinCount);
                 analyser.getByteFrequencyData(dataArray);
                 const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
+
+                // Update voice level indicator
+                const voiceLevelFill = document.getElementById("voiceLevelFill");
+                const voiceLevelContainer = document.getElementById("voiceLevelContainer");
+                if (voiceLevelFill && voiceLevelContainer) {
+                    voiceLevelContainer.classList.add("active");
+                    const levelPercent = Math.min(100, (average / 50) * 100);
+                    voiceLevelFill.style.width = levelPercent + "%";
+                }
 
                 if (average > SILENCE_THRESHOLD) {
                     // Sound detected
@@ -2547,7 +2855,7 @@
                         // Silence duration exceeded, stop recording
                         console.log('Silence detected, stopping recording');
                         if (activeRecorder && activeRecorder.state === 'recording') {
-                            activeRecorder.stop();
+                            hideVoiceLevel(); activeRecorder.stop();
                         }
                         return;
                     }
@@ -2561,7 +2869,7 @@
             setTimeout(() => {
                 if (activeRecorder && activeRecorder.state === 'recording') {
                     console.log('Max recording time reached');
-                    activeRecorder.stop();
+                    hideVoiceLevel(); activeRecorder.stop();
                 }
             }, 30000);
 
@@ -2659,7 +2967,37 @@
                 document.getElementById('listeningIndicator').classList.remove('active');
                 document.getElementById('recordBtn').classList.remove('always-on');
             }
+            
+            // If enabling always-listen, disable push-to-talk
+            if (alwaysListen && pushToTalk) {
+                pushToTalk = false;
+                document.getElementById('pttToggle').classList.remove('active');
+            }
 
+            saveSettings();
+        }
+        
+        function togglePushToTalk() {
+            pushToTalk = !pushToTalk;
+            document.getElementById('pttToggle').classList.toggle('active', pushToTalk);
+            
+            if (pushToTalk) {
+                // Disable always-listen when enabling push-to-talk
+                alwaysListen = false;
+                document.getElementById('listenToggle').classList.remove('active');
+                document.getElementById('listeningIndicator').classList.remove('active');
+                document.getElementById('recordBtn').classList.remove('always-on');
+                setStatus('Push-to-Talk mode - Hold avatar to speak');
+            } else {
+                setStatus('Tap avatar to speak');
+            }
+            
+            saveSettings();
+        }
+        
+        function updateSensitivity(value) {
+            micSensitivity = parseInt(value);
+            document.getElementById('sensitivityValue').textContent = value;
             saveSettings();
         }
 
@@ -2669,14 +3007,22 @@
                 const settings = JSON.parse(saved);
                 autoSpeak = settings.autoSpeak !== undefined ? settings.autoSpeak : true;
                 alwaysListen = settings.alwaysListen !== undefined ? settings.alwaysListen : true;
+                pushToTalk = settings.pushToTalk !== undefined ? settings.pushToTalk : false;
+                micSensitivity = settings.micSensitivity !== undefined ? settings.micSensitivity : 15;
             }
-            // Toggle states are synced when settings modal opens
+            // Update UI
+            const sensitivitySlider = document.getElementById('sensitivitySlider');
+            const sensitivityValue = document.getElementById('sensitivityValue');
+            if (sensitivitySlider) sensitivitySlider.value = micSensitivity;
+            if (sensitivityValue) sensitivityValue.textContent = micSensitivity;
         }
 
         function saveSettings() {
             const settings = {
                 autoSpeak: autoSpeak,
                 alwaysListen: alwaysListen,
+                pushToTalk: pushToTalk,
+                micSensitivity: micSensitivity,
                 voiceId: document.getElementById('voiceSelect').value
             };
             localStorage.setItem('fridaySettings', JSON.stringify(settings));
@@ -3452,6 +3798,9 @@
             // Sync toggle states
             document.getElementById('soundToggle').classList.toggle('active', autoSpeak);
             document.getElementById('listenToggle').classList.toggle('active', alwaysListen);
+            document.getElementById('pttToggle').classList.toggle('active', pushToTalk);
+            document.getElementById('sensitivitySlider').value = micSensitivity;
+            document.getElementById('sensitivityValue').textContent = micSensitivity;
             document.getElementById('themeSelect').value = currentTheme;
         }
 

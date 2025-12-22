@@ -3222,6 +3222,10 @@ CURRENT CONTEXT:
 def index():
     return render_template('index.html')
 
+@app.route('/health')
+def health():
+    return jsonify({'status': 'ok', 'message': 'FRIDAY is online'})
+
 @app.route('/transcribe', methods=['POST'])
 def transcribe():
     try:
@@ -3600,6 +3604,24 @@ def get_system_stats_endpoint():
 def get_reminders_count():
     """Get count of active reminders."""
     return jsonify({'count': len(active_reminders)})
+
+@app.route('/get_reminders', methods=['GET'])
+def get_reminders():
+    """Get all active reminders."""
+    return jsonify({'reminders': active_reminders})
+
+@app.route('/delete_reminder', methods=['POST'])
+def delete_reminder():
+    """Delete a reminder by index."""
+    try:
+        index = request.json.get('index', 0)
+        if 0 <= index < len(active_reminders):
+            active_reminders.pop(index)
+            save_reminders()
+            return jsonify({'success': True})
+        return jsonify({'error': 'Invalid index'}), 400
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/get_profile', methods=['GET'])
 def get_profile_endpoint():
