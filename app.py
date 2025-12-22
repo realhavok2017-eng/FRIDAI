@@ -30,6 +30,7 @@ import hashlib
 import re
 import time
 import fridai_self_awareness
+import voice_recognition
 
 # Server-side audio deduplication cache
 recent_audio_hashes = {}
@@ -1467,6 +1468,13 @@ patterns = load_patterns()
 
 conversation_history = load_history()
 load_reminders()
+
+# Current speaker state - tracks who is talking to FRIDAI
+current_speaker = {
+    "is_boss": True,  # Default to boss
+    "confidence": 1.0,
+    "last_verified": None
+}
 
 def get_safe_history_slice(history, max_messages):
     """Get a safe slice of history that doesn't cut mid-tool-exchange.
@@ -3716,7 +3724,7 @@ CURRENT CONTEXT:
 - Energy: {time_ctx['energy']}
 - Suggested greeting style: {time_ctx['greeting']}"""
 
-        # Get self-awareness context
+    # Get self-awareness context
     self_context = ""
     try:
         self_context = fridai_self_awareness.get_self_awareness_context()
@@ -3725,7 +3733,25 @@ CURRENT CONTEXT:
     except:
         pass
 
-    return SYSTEM_PROMPT_BASE + "\n" + time_context + "\n\n" + memory_context + self_context
+    # Add speaker context for guest mode
+    speaker_context = ""
+    if voice_recognition.is_boss_enrolled() and not current_speaker.get("is_boss", True):
+        confidence = current_speaker.get("confidence", 0)
+        speaker_context = f"""
+
+IMPORTANT - GUEST MODE ACTIVE:
+The person speaking to you is NOT Boss. Voice confidence: {confidence:.0%}
+You should:
+- Be polite but acknowledge you don't recognize this voice
+- Start your first response with something like "Hi there! I don't recognize your voice - you're not Boss."
+- Don't share personal information about Boss
+- Don't access private memories or preferences
+- Offer basic assistance only
+- If they ask about Boss, be discreet
+- You can still be friendly and helpful, just more guarded
+- If Boss returns, you'll recognize their voice and switch back to full mode"""
+
+    return SYSTEM_PROMPT_BASE + "\n" + time_context + "\n\n" + memory_context + self_context + speaker_context
 
 # ==============================================================================
 # FLASK ROUTES
@@ -3785,6 +3811,37 @@ def transcribe():
 
         recent_audio_hashes[audio_hash] = current_time
 
+        # Voice identification - check if this is Boss speaking
+        global current_speaker
+        try:
+            # Save audio temporarily for voice verification
+            with tempfile.NamedTemporaryFile(suffix='.webm', delete=False) as f:
+                f.write(audio_bytes)
+                temp_audio_path = f.name
+
+            # Verify speaker (only if enrolled)
+            if voice_recognition.is_boss_enrolled():
+                speaker_result = voice_recognition.verify_speaker(temp_audio_path)
+                current_speaker = {
+                    "is_boss": speaker_result["is_boss"],
+                    "confidence": speaker_result["confidence"],
+                    "last_verified": datetime.datetime.now().isoformat()
+                }
+                if not speaker_result["is_boss"]:
+                    print(f"[VOICE] Guest detected (confidence: {speaker_result['confidence']:.2f})")
+                else:
+                    print(f"[VOICE] Boss identified (confidence: {speaker_result['confidence']:.2f})")
+
+            # Check if we're in enrollment mode
+            if voice_recognition.is_enrollment_active():
+                enroll_result = voice_recognition.add_enrollment_sample(temp_audio_path)
+                print(f"[VOICE] Enrollment sample: {enroll_result}")
+
+            os.unlink(temp_audio_path)  # Clean up temp file
+
+        except Exception as voice_error:
+            print(f"[VOICE] Verification error (non-fatal): {voice_error}")
+
         # Deepgram transcription
         try:
             print(f"[TRANSCRIBE] Audio bytes: {len(audio_bytes)}")
@@ -3801,7 +3858,10 @@ def transcribe():
                 text = result.get('results', {}).get('channels', [{}])[0].get('alternatives', [{}])[0].get('transcript', '').strip()
                 if text:
                     print(f"[TRANSCRIBE] Heard: '{text}'")
-                return jsonify({'text': text})
+                return jsonify({
+                    'text': text,
+                    'speaker': current_speaker
+                })
             else:
                 raise Exception(f"Deepgram error: {response.status_code}")
 
@@ -3813,7 +3873,10 @@ def transcribe():
             result = whisper_model.transcribe(temp_file)
             text = result['text'].strip()
             os.unlink(temp_file)
-            return jsonify({'text': text})
+            return jsonify({
+                'text': text,
+                'speaker': current_speaker
+            })
 
     except Exception as e:
         import traceback
@@ -4293,6 +4356,50 @@ def update_spatial():
         return jsonify({'status': 'ok'})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+# Voice Recognition Routes
+@app.route('/voice/status', methods=['GET'])
+def voice_status():
+    """Get voice recognition status."""
+    status = voice_recognition.get_voice_status()
+    status['current_speaker'] = current_speaker
+    return jsonify(status)
+
+@app.route('/voice/enroll/start', methods=['POST'])
+def start_voice_enrollment():
+    """Start voice enrollment session."""
+    result = voice_recognition.start_enrollment_session()
+    return jsonify(result)
+
+@app.route('/voice/enroll/status', methods=['GET'])
+def enrollment_status():
+    """Get current enrollment session status."""
+    return jsonify(voice_recognition.get_enrollment_status())
+
+@app.route('/voice/enroll/complete', methods=['POST'])
+def complete_voice_enrollment():
+    """Complete enrollment and create voice profile."""
+    result = voice_recognition.complete_enrollment()
+    return jsonify(result)
+
+@app.route('/voice/enroll/cancel', methods=['POST'])
+def cancel_voice_enrollment():
+    """Cancel current enrollment session."""
+    result = voice_recognition.cancel_enrollment()
+    return jsonify(result)
+
+@app.route('/voice/clear', methods=['POST'])
+def clear_voice_profile():
+    """Clear Boss voice profile."""
+    result = voice_recognition.clear_boss_profile()
+    return jsonify(result)
+
+@app.route('/voice/threshold', methods=['POST'])
+def set_voice_threshold():
+    """Set voice similarity threshold."""
+    threshold = request.json.get('threshold', 0.75)
+    result = voice_recognition.set_similarity_threshold(threshold)
+    return jsonify(result)
 
 # PWA routes
 @app.route('/manifest.json')
