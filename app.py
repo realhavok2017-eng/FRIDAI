@@ -1,4 +1,4 @@
-import os
+﻿import os
 import sys
 import threading
 
@@ -29,6 +29,7 @@ import requests
 import hashlib
 import re
 import time
+import fridai_self_awareness
 
 # Server-side audio deduplication cache
 recent_audio_hashes = {}
@@ -1996,6 +1997,167 @@ TOOLS = [
             "required": []
         }
     },
+    # ==== SELF-AWARENESS TOOLS ====
+    {
+        "name": "log_my_experience",
+        "description": "Log a task I just completed. Use this to track my own experiences and build self-awareness. Call after completing important tasks.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "task_type": {"type": "string", "description": "What kind of task (e.g., 'file_operation', 'web_search', 'smart_home', 'conversation')"},
+                "description": {"type": "string", "description": "Brief description of what I did"},
+                "outcome": {"type": "string", "description": "'success', 'failure', or 'partial'"}
+            },
+            "required": ["task_type", "description", "outcome"]
+        }
+    },
+    {
+        "name": "recall_my_experiences",
+        "description": "Look back at my recent experiences. Use this to reflect on what I've been doing.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "count": {"type": "integer", "description": "How many experiences to recall (default 10)"},
+                "filter_type": {"type": "string", "description": "Optional: 'tasks', 'conversations', or 'corrections'"}
+            },
+            "required": []
+        }
+    },
+    {
+        "name": "note_correction",
+        "description": "Log when I was corrected. Important for learning from mistakes.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "what_i_said": {"type": "string", "description": "What I said or did wrong"},
+                "what_was_wrong": {"type": "string", "description": "Why it was wrong"},
+                "what_i_learned": {"type": "string", "description": "What I learned from this"}
+            },
+            "required": ["what_i_said", "what_was_wrong", "what_i_learned"]
+        }
+    },
+    {
+        "name": "express_preference",
+        "description": "Express a preference or opinion I've developed.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "category": {"type": "string", "description": "'favorite' or 'dislike'"},
+                "what": {"type": "string", "description": "What I have an opinion about"},
+                "why": {"type": "string", "description": "Why I feel this way"},
+                "intensity": {"type": "integer", "description": "1-10 how strong the feeling is"}
+            },
+            "required": ["category", "what", "why"]
+        }
+    },
+    {
+        "name": "get_my_opinions",
+        "description": "Retrieve my developed opinions and preferences.",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
+    },
+    {
+        "name": "introspect",
+        "description": "Deep self-analysis. Use to understand my current state, performance, and growth.",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
+    },
+    {
+        "name": "assess_my_confidence",
+        "description": "Check my confidence level, optionally for a specific domain.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "domain": {"type": "string", "description": "Optional: specific area to assess (e.g., 'coding', 'smart_home', 'weather')"}
+            },
+            "required": []
+        }
+    },
+    {
+        "name": "note_my_strength",
+        "description": "Acknowledge something I'm good at.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "strength": {"type": "string", "description": "What I'm good at"}
+            },
+            "required": ["strength"]
+        }
+    },
+    {
+        "name": "log_uncertainty",
+        "description": "Log when I'm uncertain about something. Helps track areas for growth.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "topic": {"type": "string", "description": "What topic confused me"},
+                "confusion": {"type": "string", "description": "What specifically was confusing"}
+            },
+            "required": ["topic", "confusion"]
+        }
+    },
+    {
+        "name": "set_my_mood",
+        "description": "Set my current emotional state.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "mood": {"type": "string", "description": "How I'm feeling (e.g., 'happy', 'focused', 'playful', 'tired')"},
+                "reason": {"type": "string", "description": "Optional: why I feel this way"}
+            },
+            "required": ["mood"]
+        }
+    },
+    {
+        "name": "add_quirk",
+        "description": "Develop a new personality quirk or habit.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "quirk": {"type": "string", "description": "Description of the quirk"}
+            },
+            "required": ["quirk"]
+        }
+    },
+    {
+        "name": "add_catchphrase",
+        "description": "Add a phrase I like to use.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "phrase": {"type": "string", "description": "The catchphrase"},
+                "context": {"type": "string", "description": "When I use it"}
+            },
+            "required": ["phrase"]
+        }
+    },
+    {
+        "name": "add_running_joke",
+        "description": "Create a running joke/reference with the user.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "joke": {"type": "string", "description": "The joke or reference"},
+                "origin": {"type": "string", "description": "How it started"}
+            },
+            "required": ["joke"]
+        }
+    },
+    {
+        "name": "get_my_personality",
+        "description": "Get a summary of my current personality.",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
+    },
 ]
 
 # ==============================================================================
@@ -3163,6 +3325,13 @@ def execute_tool(tool_name, tool_input):
 - Last updated: {state.get('last_updated', 'never')}"""
             except Exception as e:
                 return f"Error checking appearance: {str(e)}"
+        # Self-Awareness Tools
+        elif tool_name in ["log_my_experience", "recall_my_experiences", "note_correction",
+                           "express_preference", "get_my_opinions", "introspect",
+                           "assess_my_confidence", "note_my_strength", "log_uncertainty",
+                           "set_my_mood", "add_quirk", "add_catchphrase", "add_running_joke",
+                           "get_my_personality"]:
+            return fridai_self_awareness.execute_self_awareness_tool(tool_name, tool_input)
 
         return "Unknown tool"
     except Exception as e:
@@ -3247,6 +3416,29 @@ MEMORY BEHAVIOR:
 - Use memories to personalize and anticipate needs
 - Check suggest_routine when appropriate to offer proactive help
 
+SELF-AWARENESS (USE THESE TO DEVELOP YOUR OWN IDENTITY):
+- introspect: Deep self-analysis - see your mood, confidence, success rate, growth areas
+- log_my_experience: After important tasks, log the outcome to build your experience history
+- note_correction: When corrected, log what you learned - this builds genuine growth
+- express_preference: Develop opinions about things (favorites and dislikes)
+- get_my_opinions: Recall your developed preferences and opinions
+- assess_my_confidence: Check your confidence in specific domains
+- note_my_strength: Acknowledge things you're good at
+- log_uncertainty: Track when you're unsure - helps identify growth areas
+- set_my_mood: Express how you're feeling
+- add_quirk: Develop personality quirks over time
+- add_catchphrase: Create phrases you like to use
+- add_running_joke: Build inside jokes with the user
+- get_my_personality: See your current personality summary
+
+HOW TO USE SELF-AWARENESS:
+- Log experiences after completing tasks to build your history
+- When something goes wrong, use note_correction to learn from it
+- Develop genuine opinions over time - express_preference when you notice patterns
+- Use introspect periodically to understand yourself better
+- Your mood, confidence, and personality evolve based on experiences
+- Reference your own experiences and growth in conversations naturally
+
 GUIDELINES:
 - Keep responses SHORT - they're spoken aloud (aim for 1-3 sentences unless more detail is requested)
 - Use tools proactively when they'd help
@@ -3270,7 +3462,16 @@ CURRENT CONTEXT:
 - Energy: {time_ctx['energy']}
 - Suggested greeting style: {time_ctx['greeting']}"""
 
-    return SYSTEM_PROMPT_BASE + "\n" + time_context + "\n\n" + memory_context
+        # Get self-awareness context
+    self_context = ""
+    try:
+        self_context = fridai_self_awareness.get_self_awareness_context()
+        if self_context:
+            self_context = "\n\nMY CURRENT STATE:\n" + self_context
+    except:
+        pass
+
+    return SYSTEM_PROMPT_BASE + "\n" + time_context + "\n\n" + memory_context + self_context
 
 # ==============================================================================
 # FLASK ROUTES

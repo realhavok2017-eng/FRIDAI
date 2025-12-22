@@ -47,3 +47,4 @@ new_tools.py
 create_icons.py
 templates/index.html.bak
 .env
+fridai_self.json
