@@ -141,6 +141,9 @@ SMARTTHINGS_API_KEY = os.environ.get("SMARTTHINGS_API_KEY", "")
 
 HISTORY_FILE = os.path.join(APP_DIR, "conversation_history.json")
 SETTINGS_FILE = os.path.join(APP_DIR, "user_settings.json")
+
+# Limit history sent to API to avoid rate limits (30k tokens/min)
+MAX_HISTORY_MESSAGES = 30  # Only send last 30 messages to API
 WORKSPACE = "C:\\Users\\Owner"
 
 # Initialize clients
@@ -3621,12 +3624,15 @@ def chat():
         # Check if this is a correction and save it
         check_and_save_correction(user_message, conversation_history)
 
+        # Only send recent history to API to avoid rate limits
+        recent_history = conversation_history[-MAX_HISTORY_MESSAGES:]
+
         response = anthropic_client.messages.create(
             model="claude-sonnet-4-20250514",
             max_tokens=4096,
             system=get_system_prompt(),
             tools=TOOLS,
-            messages=conversation_history
+            messages=recent_history
         )
 
         tool_results = []
@@ -3655,12 +3661,15 @@ def chat():
 
             conversation_history.append({"role": "user", "content": tool_results_content})
 
+            # Update recent history for next API call
+            recent_history = conversation_history[-MAX_HISTORY_MESSAGES:]
+
             response = anthropic_client.messages.create(
                 model="claude-sonnet-4-20250514",
                 max_tokens=4096,
                 system=get_system_prompt(),
                 tools=TOOLS,
-                messages=conversation_history
+                messages=recent_history
             )
 
         final_text = ""
