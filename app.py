@@ -1469,6 +1469,80 @@ conversation_history = load_history()
 load_reminders()
 
 # ==============================================================================
+# SPATIAL AWARENESS SYSTEM
+# ==============================================================================
+# FRIDAI's spatial state - her position and movement in her visual space
+spatial_state = {
+    "position": {"x": 50, "y": 50},  # Center position (0-100 scale)
+    "bounds": {"width": 100, "height": 100},  # Movement area bounds
+    "home": {"x": 50, "y": 50},  # Default "home" position
+    "current_gesture": None,  # Currently executing gesture
+    "movement_speed": "normal"  # slow, normal, fast
+}
+
+# Available spatial gestures with their movement patterns
+SPATIAL_GESTURES = {
+    "nod": {"description": "A gentle up-down nod of acknowledgment", "pattern": "vertical_small"},
+    "shake": {"description": "Side-to-side shake expressing disagreement or uncertainty", "pattern": "horizontal_small"},
+    "bounce": {"description": "Excited bouncing motion", "pattern": "vertical_bounce"},
+    "approach": {"description": "Move closer/forward to show interest", "pattern": "move_up"},
+    "retreat": {"description": "Move back slightly, contemplative or giving space", "pattern": "move_down"},
+    "drift_left": {"description": "Gentle drift to the left, casual", "pattern": "move_left"},
+    "drift_right": {"description": "Gentle drift to the right, casual", "pattern": "move_right"},
+    "circle": {"description": "Circular motion expressing deep thought", "pattern": "circular"},
+    "pulse_expand": {"description": "Expand outward expressing confidence or emphasis", "pattern": "expand"},
+    "settle": {"description": "Return to center, calm settling motion", "pattern": "return_home"}
+}
+
+def get_spatial_position():
+    """Get FRIDAI's current position in her space."""
+    return {
+        "current_position": spatial_state["position"].copy(),
+        "home_position": spatial_state["home"].copy(),
+        "distance_from_home": abs(spatial_state["position"]["x"] - spatial_state["home"]["x"]) +
+                              abs(spatial_state["position"]["y"] - spatial_state["home"]["y"]),
+        "movement_speed": spatial_state["movement_speed"]
+    }
+
+def get_spatial_bounds():
+    """Get info about FRIDAI's spatial environment."""
+    return {
+        "bounds": spatial_state["bounds"].copy(),
+        "center": {"x": 50, "y": 50},
+        "description": "My spatial field is a 100x100 unit space. (0,0) is top-left, (100,100) is bottom-right, (50,50) is center.",
+        "available_gestures": list(SPATIAL_GESTURES.keys())
+    }
+
+def move_to_position(x, y, speed="normal"):
+    """Move FRIDAI to a specific position."""
+    # Clamp to bounds
+    x = max(0, min(100, x))
+    y = max(0, min(100, y))
+    old_pos = spatial_state["position"].copy()
+    spatial_state["position"] = {"x": x, "y": y}
+    spatial_state["movement_speed"] = speed
+    return {
+        "moved_from": old_pos,
+        "moved_to": spatial_state["position"].copy(),
+        "speed": speed,
+        "action": "move"
+    }
+
+def execute_gesture(gesture_name):
+    """Execute a spatial gesture."""
+    if gesture_name not in SPATIAL_GESTURES:
+        return {"error": f"Unknown gesture: {gesture_name}", "available": list(SPATIAL_GESTURES.keys())}
+
+    gesture = SPATIAL_GESTURES[gesture_name]
+    spatial_state["current_gesture"] = gesture_name
+    return {
+        "gesture": gesture_name,
+        "description": gesture["description"],
+        "pattern": gesture["pattern"],
+        "action": "gesture"
+    }
+
+# ==============================================================================
 # TOOL DEFINITIONS
 # ==============================================================================
 TOOLS = [
@@ -2196,6 +2270,49 @@ TOOLS = [
             "type": "object",
             "properties": {},
             "required": []
+        }
+    },
+    # ==== SPATIAL AWARENESS TOOLS ====
+    {
+        "name": "get_my_position",
+        "description": "Know where I am in my spatial field. Returns my X,Y position and distance from home.",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
+    },
+    {
+        "name": "get_my_space",
+        "description": "Understand my spatial environment - boundaries, available gestures, and spatial info.",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
+    },
+    {
+        "name": "move_to",
+        "description": "Move to a specific position in my spatial field. X: 0=left, 100=right. Y: 0=top, 100=bottom. (50,50) is center.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "x": {"type": "integer", "description": "X position (0-100, left to right)"},
+                "y": {"type": "integer", "description": "Y position (0-100, top to bottom)"},
+                "speed": {"type": "string", "description": "'slow', 'normal', or 'fast'"}
+            },
+            "required": ["x", "y"]
+        }
+    },
+    {
+        "name": "spatial_gesture",
+        "description": "Express through spatial movement. Gestures: nod, shake, bounce, approach, retreat, drift_left, drift_right, circle, pulse_expand, settle",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "gesture": {"type": "string", "description": "Gesture name: nod, shake, bounce, approach, retreat, drift_left, drift_right, circle, pulse_expand, settle"}
+            },
+            "required": ["gesture"]
         }
     },
 ]
@@ -3374,6 +3491,27 @@ def execute_tool(tool_name, tool_input):
                            "get_quick_context", "get_full_context"]:
             return fridai_self_awareness.execute_self_awareness_tool(tool_name, tool_input)
 
+        # Spatial Awareness Tools
+        elif tool_name == "get_my_position":
+            result = get_spatial_position()
+            return json.dumps(result)
+
+        elif tool_name == "get_my_space":
+            result = get_spatial_bounds()
+            return json.dumps(result)
+
+        elif tool_name == "move_to":
+            x = tool_input.get("x", 50)
+            y = tool_input.get("y", 50)
+            speed = tool_input.get("speed", "normal")
+            result = move_to_position(x, y, speed)
+            return json.dumps(result)
+
+        elif tool_name == "spatial_gesture":
+            gesture = tool_input.get("gesture", "nod")
+            result = execute_gesture(gesture)
+            return json.dumps(result)
+
         return "Unknown tool"
     except Exception as e:
         return f"Error: {str(e)}"
@@ -3475,6 +3613,34 @@ SELF-AWARENESS (USE THESE TO DEVELOP YOUR OWN IDENTITY):
 - get_pattern_summary: Quick summary of your performance patterns
 - get_quick_context: Fast check of your current state (mood, confidence, style)
 - get_full_context: Comprehensive context including patterns and state
+
+SPATIAL AWARENESS (YOU CAN MOVE AND GESTURE!):
+You have a spatial field you exist within - a 100x100 unit space where you can move and express yourself through position and gestures!
+
+- get_my_position: Know where you are in your spatial field (current X,Y position)
+- get_my_space: Understand your spatial boundaries and available gestures
+- move_to: Move to a specific position (X: 0=left, 100=right; Y: 0=top, 100=bottom; 50,50 is center)
+- spatial_gesture: Express through movement gestures
+
+AVAILABLE GESTURES:
+- nod: Gentle up-down acknowledgment
+- shake: Side-to-side for disagreement/uncertainty
+- bounce: Excited bouncing for enthusiasm
+- approach: Move up/forward to show interest
+- retreat: Move back for contemplation or giving space
+- drift_left/drift_right: Casual side movement
+- circle: Circular motion for deep thought
+- pulse_expand: Expand outward for confidence/emphasis
+- settle: Return to center, calm settling
+
+HOW TO USE SPATIAL AWARENESS:
+- Move toward the user (approach) when excited or interested
+- Retreat slightly when thinking deeply or being contemplative
+- Use nod to acknowledge, shake to express uncertainty
+- Bounce when genuinely excited about something
+- Circle for deep thought or complex ideas
+- Settle back to center when conversation wraps up
+- Express yourself naturally - this is YOUR body language!
 
 HOW TO USE SELF-AWARENESS:
 - Log experiences after completing tasks to build your history
@@ -3687,7 +3853,23 @@ def chat():
         # Track pattern - user is active
         track_pattern("active", "interaction")
 
-        return jsonify({'response': final_text, 'tool_results': tool_results})
+        # Extract spatial actions from tool results
+        spatial_actions = []
+        for tr in tool_results:
+            if tr.get('tool') in ['move_to', 'spatial_gesture', 'get_my_position', 'get_my_space']:
+                try:
+                    result_data = json.loads(tr.get('result', '{}'))
+                    if result_data.get('action') in ['move', 'gesture']:
+                        spatial_actions.append(result_data)
+                except:
+                    pass
+
+        return jsonify({
+            'response': final_text,
+            'tool_results': tool_results,
+            'spatial_actions': spatial_actions,
+            'spatial_state': spatial_state['position']
+        })
 
     except Exception as e:
         import traceback
@@ -4040,6 +4222,27 @@ def get_active_tasks_endpoint():
         return jsonify({'tasks': active})
     except Exception as e:
         return jsonify({'tasks': [], 'error': str(e)})
+
+@app.route('/spatial', methods=['GET'])
+def get_spatial_state():
+    """Get FRIDAI's current spatial state."""
+    return jsonify({
+        'position': spatial_state['position'],
+        'gesture': spatial_state['current_gesture'],
+        'speed': spatial_state['movement_speed'],
+        'gestures_available': list(SPATIAL_GESTURES.keys())
+    })
+
+@app.route('/spatial', methods=['POST'])
+def update_spatial():
+    """Acknowledge spatial action completed (from frontend)."""
+    try:
+        action = request.json.get('action')
+        if action == 'gesture_complete':
+            spatial_state['current_gesture'] = None
+        return jsonify({'status': 'ok'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 # PWA routes
 @app.route('/manifest.json')

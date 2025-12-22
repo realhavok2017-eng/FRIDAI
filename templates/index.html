@@ -1977,6 +1977,115 @@
             .arc-line { width: 25px; }
         }
 
+        /* ============================================
+           SPATIAL AWARENESS SYSTEM
+           ============================================ */
+
+        /* Spatial container - the field FRIDAI can move within */
+        .spatial-field {
+            position: relative;
+            width: 100%;
+            max-width: 300px;
+            height: 200px;
+            margin: 0 auto 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Make avatar container absolutely positioned within spatial field */
+        .spatial-field .friday-avatar-container {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            transition: left 0.5s ease-out, top 0.5s ease-out;
+            margin: 0;
+        }
+
+        /* Speed variations for movement */
+        .spatial-field .friday-avatar-container.move-slow {
+            transition: left 1.2s ease-in-out, top 1.2s ease-in-out;
+        }
+
+        .spatial-field .friday-avatar-container.move-fast {
+            transition: left 0.2s ease-out, top 0.2s ease-out;
+        }
+
+        /* Gesture animations */
+        @keyframes spatial-nod {
+            0%, 100% { transform: translate(-50%, -50%); }
+            25% { transform: translate(-50%, calc(-50% - 8px)); }
+            75% { transform: translate(-50%, calc(-50% + 8px)); }
+        }
+
+        @keyframes spatial-shake {
+            0%, 100% { transform: translate(-50%, -50%); }
+            20% { transform: translate(calc(-50% - 10px), -50%); }
+            40% { transform: translate(calc(-50% + 10px), -50%); }
+            60% { transform: translate(calc(-50% - 8px), -50%); }
+            80% { transform: translate(calc(-50% + 6px), -50%); }
+        }
+
+        @keyframes spatial-bounce {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); }
+            25% { transform: translate(-50%, calc(-50% - 15px)) scale(1.05); }
+            50% { transform: translate(-50%, -50%) scale(0.98); }
+            75% { transform: translate(-50%, calc(-50% - 10px)) scale(1.02); }
+        }
+
+        @keyframes spatial-circle {
+            0% { transform: translate(-50%, -50%); }
+            25% { transform: translate(calc(-50% + 15px), calc(-50% - 10px)); }
+            50% { transform: translate(calc(-50% + 5px), calc(-50% + 15px)); }
+            75% { transform: translate(calc(-50% - 15px), calc(-50% - 5px)); }
+            100% { transform: translate(-50%, -50%); }
+        }
+
+        @keyframes spatial-expand {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.15); }
+        }
+
+        .spatial-field .friday-avatar-container.gesture-nod {
+            animation: spatial-nod 0.6s ease-in-out;
+        }
+
+        .spatial-field .friday-avatar-container.gesture-shake {
+            animation: spatial-shake 0.5s ease-in-out;
+        }
+
+        .spatial-field .friday-avatar-container.gesture-bounce {
+            animation: spatial-bounce 0.7s ease-in-out;
+        }
+
+        .spatial-field .friday-avatar-container.gesture-circle {
+            animation: spatial-circle 1.2s ease-in-out;
+        }
+
+        .spatial-field .friday-avatar-container.gesture-expand {
+            animation: spatial-expand 0.8s ease-in-out;
+        }
+
+        /* Visual indicator of spatial field bounds (subtle) */
+        .spatial-field::before {
+            content: '';
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            bottom: 10px;
+            border: 1px dashed rgba(0, 217, 255, 0.1);
+            border-radius: 20px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .spatial-field.show-bounds::before {
+            opacity: 1;
+        }
+
         /* Memory Panel (Slide-out) */
         .memory-panel {
             position: fixed;
@@ -2313,43 +2422,45 @@
             </div>
         </header>
 
-        <!-- FRIDAY Avatar - Living AI Presence -->
-        <div class="friday-avatar-container" id="fridayAvatar"
-             ontouchstart="handleAvatarStart(event)"
-             ontouchend="handleAvatarEnd(event)"
-             onmousedown="handleAvatarStart(event)"
-             onmouseup="handleAvatarEnd(event)">
-            <!-- Ambient Glow -->
-            <div class="avatar-glow"></div>
-            <!-- Orbital Rings -->
-            <div class="avatar-ring-outer"></div>
-            <div class="avatar-ring-middle"></div>
-            <div class="avatar-ring-inner"></div>
-            <!-- Energy Field -->
-            <div class="avatar-energy"></div>
-            <!-- Arc Reactor Lines -->
-            <div class="avatar-arc-lines">
-                <div class="arc-line"></div>
-                <div class="arc-line"></div>
-                <div class="arc-line"></div>
-                <div class="arc-line"></div>
-                <div class="arc-line"></div>
-                <div class="arc-line"></div>
-                <div class="arc-line"></div>
-                <div class="arc-line"></div>
-            </div>
-            <!-- Core -->
-            <div class="avatar-core"></div>
-            <!-- Orbiting Particles -->
-            <div class="avatar-particles">
-                <div class="particle"></div>
-                <div class="particle"></div>
-                <div class="particle"></div>
-                <div class="particle"></div>
-                <div class="particle"></div>
-                <div class="particle"></div>
-                <div class="particle"></div>
-                <div class="particle"></div>
+        <!-- FRIDAY Avatar - Living AI Presence with Spatial Awareness -->
+        <div class="spatial-field" id="spatialField">
+            <div class="friday-avatar-container" id="fridayAvatar"
+                 ontouchstart="handleAvatarStart(event)"
+                 ontouchend="handleAvatarEnd(event)"
+                 onmousedown="handleAvatarStart(event)"
+                 onmouseup="handleAvatarEnd(event)">
+                <!-- Ambient Glow -->
+                <div class="avatar-glow"></div>
+                <!-- Orbital Rings -->
+                <div class="avatar-ring-outer"></div>
+                <div class="avatar-ring-middle"></div>
+                <div class="avatar-ring-inner"></div>
+                <!-- Energy Field -->
+                <div class="avatar-energy"></div>
+                <!-- Arc Reactor Lines -->
+                <div class="avatar-arc-lines">
+                    <div class="arc-line"></div>
+                    <div class="arc-line"></div>
+                    <div class="arc-line"></div>
+                    <div class="arc-line"></div>
+                    <div class="arc-line"></div>
+                    <div class="arc-line"></div>
+                    <div class="arc-line"></div>
+                    <div class="arc-line"></div>
+                </div>
+                <!-- Core -->
+                <div class="avatar-core"></div>
+                <!-- Orbiting Particles -->
+                <div class="avatar-particles">
+                    <div class="particle"></div>
+                    <div class="particle"></div>
+                    <div class="particle"></div>
+                    <div class="particle"></div>
+                    <div class="particle"></div>
+                    <div class="particle"></div>
+                    <div class="particle"></div>
+                    <div class="particle"></div>
+                </div>
             </div>
         </div>
         <div class="avatar-status" id="avatarStatus">Tap to speak</div>
@@ -3295,6 +3406,11 @@
                     });
                 }
 
+                // Handle spatial actions from FRIDAI
+                if (data.spatial_actions) {
+                    handleSpatialActions(data.spatial_actions, data.spatial_state);
+                }
+
                 addMessage(data.response, 'assistant');
 
                 if (autoSpeak && data.response) {
@@ -3458,8 +3574,137 @@
             }
         }
 
+        // ============================================
+        // SPATIAL AWARENESS SYSTEM
+        // ============================================
+
+        // Convert 0-100 position to CSS percentage
+        function positionToPercent(val) {
+            // val 0-100 maps to 10%-90% to keep within bounds with padding
+            return 10 + (val * 0.8);
+        }
+
+        // Move avatar to a specific position
+        function moveAvatarTo(x, y, speed = 'normal') {
+            const avatar = document.getElementById('fridayAvatar');
+            if (!avatar) return;
+
+            // Remove existing speed classes
+            avatar.classList.remove('move-slow', 'move-fast');
+
+            // Add speed class
+            if (speed === 'slow') avatar.classList.add('move-slow');
+            else if (speed === 'fast') avatar.classList.add('move-fast');
+
+            // Set position (convert 0-100 to percentage)
+            const leftPercent = positionToPercent(x);
+            const topPercent = positionToPercent(y);
+            avatar.style.left = leftPercent + '%';
+            avatar.style.top = topPercent + '%';
+        }
+
+        // Play a gesture animation
+        function playGesture(gestureName) {
+            const avatar = document.getElementById('fridayAvatar');
+            if (!avatar) return;
+
+            // Map gesture names to CSS classes
+            const gestureMap = {
+                'nod': 'gesture-nod',
+                'shake': 'gesture-shake',
+                'bounce': 'gesture-bounce',
+                'circle': 'gesture-circle',
+                'pulse_expand': 'gesture-expand',
+                'approach': null,  // These are position changes, not animations
+                'retreat': null,
+                'drift_left': null,
+                'drift_right': null,
+                'settle': null
+            };
+
+            // Handle position-based gestures
+            if (gestureName === 'approach') {
+                moveAvatarTo(50, 30, 'normal');  // Move up
+                return;
+            } else if (gestureName === 'retreat') {
+                moveAvatarTo(50, 70, 'slow');  // Move down
+                return;
+            } else if (gestureName === 'drift_left') {
+                moveAvatarTo(30, 50, 'slow');
+                return;
+            } else if (gestureName === 'drift_right') {
+                moveAvatarTo(70, 50, 'slow');
+                return;
+            } else if (gestureName === 'settle') {
+                moveAvatarTo(50, 50, 'slow');
+                return;
+            }
+
+            const gestureClass = gestureMap[gestureName];
+            if (!gestureClass) return;
+
+            // Remove any existing gesture classes
+            Object.values(gestureMap).forEach(cls => {
+                if (cls) avatar.classList.remove(cls);
+            });
+
+            // Add the gesture class
+            avatar.classList.add(gestureClass);
+
+            // Remove after animation completes
+            const durations = {
+                'gesture-nod': 600,
+                'gesture-shake': 500,
+                'gesture-bounce': 700,
+                'gesture-circle': 1200,
+                'gesture-expand': 800
+            };
+            const duration = durations[gestureClass] || 600;
+
+            setTimeout(() => {
+                avatar.classList.remove(gestureClass);
+                // Notify server gesture is complete
+                fetch('/spatial', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'gesture_complete' })
+                }).catch(() => {});
+            }, duration);
+        }
+
+        // Handle spatial actions from API response
+        function handleSpatialActions(spatialActions, spatialState) {
+            if (!spatialActions || spatialActions.length === 0) return;
+
+            spatialActions.forEach(action => {
+                if (action.action === 'move') {
+                    moveAvatarTo(
+                        action.moved_to.x,
+                        action.moved_to.y,
+                        action.speed || 'normal'
+                    );
+                } else if (action.action === 'gesture') {
+                    playGesture(action.gesture);
+                }
+            });
+        }
+
+        // Initialize spatial position from server
+        async function initSpatialState() {
+            try {
+                const res = await fetch('/spatial');
+                const data = await res.json();
+                if (data.position) {
+                    moveAvatarTo(data.position.x, data.position.y, 'fast');
+                }
+            } catch (e) {
+                console.log('Could not load spatial state');
+            }
+        }
+
         // Initialize on page load
         init();
+        initSpatialState();
 
         // Register service worker for PWA
         if ('serviceWorker' in navigator) {
