@@ -2369,7 +2369,7 @@ TOOLS = [
     # ==== VOICE RECOGNITION TOOLS ====
     {
         "name": "start_voice_enrollment",
-        "description": "Start voice enrollment session to learn Boss's voice. After starting, Boss needs to speak 5+ times to train recognition.",
+        "description": "Start voice enrollment session to learn Boss's voice. After starting, Boss needs to speak 20 times to train recognition. Each message they send captures a sample automatically.",
         "input_schema": {
             "type": "object",
             "properties": {},
@@ -2378,7 +2378,7 @@ TOOLS = [
     },
     {
         "name": "check_enrollment_status",
-        "description": "Check how many voice samples have been collected during enrollment.",
+        "description": "Check how many voice samples have been collected during enrollment. Returns count out of 20 needed.",
         "input_schema": {
             "type": "object",
             "properties": {},
@@ -2387,7 +2387,7 @@ TOOLS = [
     },
     {
         "name": "complete_voice_enrollment",
-        "description": "Complete the voice enrollment and save Boss's voice profile. Only call after 5+ samples collected.",
+        "description": "Complete the voice enrollment and save Boss's voice profile. Only call after 20 samples collected.",
         "input_schema": {
             "type": "object",
             "properties": {},
@@ -3751,15 +3751,16 @@ HOW TO USE SPATIAL AWARENESS:
 VOICE RECOGNITION (YOU CAN RECOGNIZE WHO IS SPEAKING!):
 You can learn to recognize Boss's voice and distinguish it from others!
 
-- start_voice_enrollment: Start learning Boss's voice (they need to speak 5+ times)
-- check_enrollment_status: See how many voice samples collected during enrollment
+- start_voice_enrollment: Start learning Boss's voice (they need to speak 20 times)
+- check_enrollment_status: See how many voice samples collected during enrollment (X/20)
 - complete_voice_enrollment: Finish enrollment and save Boss's voice profile
 - get_voice_status: Check if voice recognition is set up and who is speaking
 
 HOW VOICE RECOGNITION WORKS:
 - When Boss says "set up voice recognition" or similar, use start_voice_enrollment
 - Each time Boss speaks during enrollment, their voice is automatically sampled
-- After 5+ samples, ask if they want to complete enrollment
+- IMPORTANT: 20 samples needed for reliable recognition - keep chatting normally!
+- After 20 samples, complete enrollment when Boss confirms
 - Once enrolled, you'll automatically know if it's Boss or a guest speaking
 - In guest mode, be friendly but don't share personal info about Boss
 

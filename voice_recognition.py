@@ -8,6 +8,11 @@ import json
 import numpy as np
 from pathlib import Path
 from datetime import datetime
+import tempfile
+import subprocess
+
+# Configuration
+MIN_ENROLLMENT_SAMPLES = 20  # Require 20 samples for reliable voice profile
 
 # Lazy load resemblyzer to avoid slow startup
 _encoder = None
@@ -21,6 +26,47 @@ def get_encoder():
         _encoder = VoiceEncoder()
         print("Voice encoder loaded!")
     return _encoder
+
+def convert_to_wav(input_path):
+    """Convert audio file to WAV format for resemblyzer."""
+    # Check if it's already a wav
+    if input_path.lower().endswith('.wav'):
+        return input_path, False  # Return path and flag indicating no cleanup needed
+
+    # Create temp wav file
+    wav_path = tempfile.mktemp(suffix='.wav')
+
+    try:
+        # Use ffmpeg to convert - try both ffmpeg locations
+        ffmpeg_paths = [
+            'ffmpeg',  # System PATH
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ffmpeg.exe'),  # App directory
+        ]
+
+        for ffmpeg in ffmpeg_paths:
+            try:
+                result = subprocess.run([
+                    ffmpeg, '-i', input_path,
+                    '-ar', '16000',  # 16kHz sample rate
+                    '-ac', '1',      # Mono
+                    '-y',            # Overwrite
+                    wav_path
+                ], capture_output=True, timeout=30)
+
+                if result.returncode == 0 and os.path.exists(wav_path):
+                    return wav_path, True  # Return path and flag indicating cleanup needed
+            except FileNotFoundError:
+                continue
+            except Exception as e:
+                print(f"FFmpeg error with {ffmpeg}: {e}")
+                continue
+
+        print("FFmpeg conversion failed - trying direct load")
+        return input_path, False
+
+    except Exception as e:
+        print(f"Conversion error: {e}")
+        return input_path, False
 
 # Paths
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -74,23 +120,49 @@ def get_embedding_from_audio(audio_data, sample_rate=16000):
         numpy array embedding (256 dimensions)
     """
     encoder = get_encoder()
+    cleanup_wav = False
+    wav_path = None
 
-    # If it's a file path, load it
-    if isinstance(audio_data, (str, Path)):
-        from resemblyzer import preprocess_wav
-        wav = preprocess_wav(audio_data)
-    else:
-        # Assume it's already a numpy array
-        # Normalize if needed
-        if audio_data.dtype != np.float32:
-            audio_data = audio_data.astype(np.float32)
-        if np.max(np.abs(audio_data)) > 1.0:
-            audio_data = audio_data / 32768.0  # Convert from int16
-        wav = audio_data
+    try:
+        # If it's a file path, convert to WAV and load
+        if isinstance(audio_data, (str, Path)):
+            audio_path = str(audio_data)
 
-    # Get embedding
-    embedding = encoder.embed_utterance(wav)
-    return embedding
+            # Check file exists
+            if not os.path.exists(audio_path):
+                raise FileNotFoundError(f"Audio file not found: {audio_path}")
+
+            # Convert to WAV (handles webm, mp3, etc.)
+            wav_path, cleanup_wav = convert_to_wav(audio_path)
+            print(f"[VOICE] Processing: {audio_path} -> {wav_path}")
+
+            from resemblyzer import preprocess_wav
+            wav = preprocess_wav(wav_path)
+        else:
+            # Assume it's already a numpy array
+            # Normalize if needed
+            if audio_data.dtype != np.float32:
+                audio_data = audio_data.astype(np.float32)
+            if np.max(np.abs(audio_data)) > 1.0:
+                audio_data = audio_data / 32768.0  # Convert from int16
+            wav = audio_data
+
+        # Check we have valid audio
+        if len(wav) < 1600:  # Less than 0.1 seconds at 16kHz
+            raise ValueError("Audio too short for voice embedding")
+
+        # Get embedding
+        embedding = encoder.embed_utterance(wav)
+        print(f"[VOICE] Embedding extracted successfully (shape: {embedding.shape})")
+        return embedding
+
+    finally:
+        # Clean up temp WAV file if we created one
+        if cleanup_wav and wav_path and os.path.exists(wav_path):
+            try:
+                os.unlink(wav_path)
+            except:
+                pass
 
 def enroll_boss_voice(audio_samples):
     """
@@ -244,8 +316,8 @@ def start_enrollment_session():
     }
     return {
         "success": True,
-        "message": "Enrollment session started. Please provide 5-10 voice samples.",
-        "samples_needed": 5
+        "message": f"Enrollment session started. Please provide {MIN_ENROLLMENT_SAMPLES} voice samples by talking to me normally.",
+        "samples_needed": MIN_ENROLLMENT_SAMPLES
     }
 
 def add_enrollment_sample(audio_data):
@@ -261,14 +333,25 @@ def add_enrollment_sample(audio_data):
         _enrollment_session["samples"].append(embedding)
 
         count = len(_enrollment_session["samples"])
+        remaining = max(0, MIN_ENROLLMENT_SAMPLES - count)
+        can_complete = count >= MIN_ENROLLMENT_SAMPLES
+
+        if can_complete:
+            message = f"Sample {count} recorded! You have enough samples - tell me to complete enrollment when ready."
+        else:
+            message = f"Sample {count}/{MIN_ENROLLMENT_SAMPLES} recorded. {remaining} more needed."
+
+        print(f"[VOICE ENROLL] {message}")
+
         return {
             "success": True,
             "samples_collected": count,
-            "samples_needed": max(0, 5 - count),
-            "can_complete": count >= 5,
-            "message": f"Sample {count} recorded. {'Ready to complete!' if count >= 5 else f'Need {5-count} more.'}"
+            "samples_needed": remaining,
+            "can_complete": can_complete,
+            "message": message
         }
     except Exception as e:
+        print(f"[VOICE ENROLL] Error adding sample: {e}")
         return {"success": False, "error": str(e)}
 
 def complete_enrollment():
@@ -279,8 +362,8 @@ def complete_enrollment():
         return {"success": False, "error": "No active enrollment session"}
 
     samples = _enrollment_session["samples"]
-    if len(samples) < 5:
-        return {"success": False, "error": f"Need at least 5 samples, only have {len(samples)}"}
+    if len(samples) < MIN_ENROLLMENT_SAMPLES:
+        return {"success": False, "error": f"Need at least {MIN_ENROLLMENT_SAMPLES} samples, only have {len(samples)}"}
 
     # Average the embeddings
     boss_embedding = np.mean(samples, axis=0)
@@ -316,8 +399,11 @@ def is_enrollment_active():
 
 def get_enrollment_status():
     """Get current enrollment session status."""
+    collected = len(_enrollment_session.get("samples", []))
     return {
         "active": _enrollment_session.get("active", False),
-        "samples_collected": len(_enrollment_session.get("samples", [])),
-        "samples_needed": max(0, 5 - len(_enrollment_session.get("samples", [])))
+        "samples_collected": collected,
+        "samples_needed": max(0, MIN_ENROLLMENT_SAMPLES - collected),
+        "samples_required": MIN_ENROLLMENT_SAMPLES,
+        "can_complete": collected >= MIN_ENROLLMENT_SAMPLES
     }
