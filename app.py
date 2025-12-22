@@ -3887,8 +3887,10 @@ def chat():
             if hasattr(block, 'text'):
                 final_text += block.text
 
-        conversation_history.append({"role": "assistant", "content": final_text})
-        save_history(conversation_history)
+        # Only save non-empty assistant messages
+        if final_text.strip():
+            conversation_history.append({"role": "assistant", "content": final_text})
+            save_history(conversation_history)
 
         # Check if we should create a conversation summary
         if should_summarize_conversation():
