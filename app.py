@@ -1468,6 +1468,49 @@ patterns = load_patterns()
 conversation_history = load_history()
 load_reminders()
 
+def get_safe_history_slice(history, max_messages):
+    """Get a safe slice of history that doesn't cut mid-tool-exchange.
+
+    The API requires tool_result messages to have matching tool_use in previous message.
+    This function ensures we never start with an orphaned tool_result.
+    """
+    if len(history) <= max_messages:
+        return history
+
+    # Start with the naive slice
+    start_idx = len(history) - max_messages
+
+    # Check if first message is a tool_result (orphaned)
+    while start_idx < len(history):
+        first_msg = history[start_idx]
+
+        # Check if this is a tool_result message
+        if first_msg.get('role') == 'user' and isinstance(first_msg.get('content'), list):
+            is_tool_result = any(
+                isinstance(c, dict) and c.get('type') == 'tool_result'
+                for c in first_msg['content']
+            )
+            if is_tool_result:
+                # This is orphaned, skip it
+                start_idx += 1
+                continue
+
+        # Check if first message is assistant with tool_use (also problematic - no context)
+        if first_msg.get('role') == 'assistant' and isinstance(first_msg.get('content'), list):
+            has_tool_use = any(
+                isinstance(c, dict) and c.get('type') == 'tool_use'
+                for c in first_msg['content']
+            )
+            if has_tool_use:
+                # Skip this and the following tool_result
+                start_idx += 1
+                continue
+
+        # Safe starting point found
+        break
+
+    return history[start_idx:]
+
 # ==============================================================================
 # SPATIAL AWARENESS SYSTEM
 # ==============================================================================
@@ -3791,7 +3834,8 @@ def chat():
         check_and_save_correction(user_message, conversation_history)
 
         # Only send recent history to API to avoid rate limits
-        recent_history = conversation_history[-MAX_HISTORY_MESSAGES:]
+        # Use safe slice to avoid orphaned tool_results
+        recent_history = get_safe_history_slice(conversation_history, MAX_HISTORY_MESSAGES)
 
         response = anthropic_client.messages.create(
             model="claude-sonnet-4-20250514",
@@ -3828,7 +3872,7 @@ def chat():
             conversation_history.append({"role": "user", "content": tool_results_content})
 
             # Update recent history for next API call
-            recent_history = conversation_history[-MAX_HISTORY_MESSAGES:]
+            recent_history = get_safe_history_slice(conversation_history, MAX_HISTORY_MESSAGES)
 
             response = anthropic_client.messages.create(
                 model="claude-sonnet-4-20250514",
