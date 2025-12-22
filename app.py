@@ -3887,6 +3887,10 @@ def chat():
             if hasattr(block, 'text'):
                 final_text += block.text
 
+        # If tools were used but no text response, provide a fallback
+        if not final_text.strip() and tool_results:
+            final_text = "Done."  # Minimal acknowledgment when only tools were used
+
         # Only save non-empty assistant messages
         if final_text.strip():
             conversation_history.append({"role": "assistant", "content": final_text})
