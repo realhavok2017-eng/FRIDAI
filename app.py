@@ -2158,6 +2158,43 @@ TOOLS = [
             "required": []
         }
     },
+    # Pattern Recognition Tools
+    {
+        "name": "analyze_my_patterns",
+        "description": "Deep analysis of my experience patterns - what I excel at, where I struggle, how I'm growing. Use to understand myself better.",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
+    },
+    {
+        "name": "get_pattern_summary",
+        "description": "Quick summary of my performance patterns - success rates, best tools, trends.",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
+    },
+    {
+        "name": "get_quick_context",
+        "description": "Get my current state quickly - mood, confidence, style. Fast self-awareness check.",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
+    },
+    {
+        "name": "get_full_context",
+        "description": "Comprehensive context about myself including patterns, state, and summary.",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
+    },
 ]
 
 # ==============================================================================
@@ -3330,7 +3367,8 @@ def execute_tool(tool_name, tool_input):
                            "express_preference", "get_my_opinions", "introspect",
                            "assess_my_confidence", "note_my_strength", "log_uncertainty",
                            "set_my_mood", "add_quirk", "add_catchphrase", "add_running_joke",
-                           "get_my_personality"]:
+                           "get_my_personality", "analyze_my_patterns", "get_pattern_summary",
+                           "get_quick_context", "get_full_context"]:
             return fridai_self_awareness.execute_self_awareness_tool(tool_name, tool_input)
 
         return "Unknown tool"
@@ -3430,6 +3468,10 @@ SELF-AWARENESS (USE THESE TO DEVELOP YOUR OWN IDENTITY):
 - add_catchphrase: Create phrases you like to use
 - add_running_joke: Build inside jokes with the user
 - get_my_personality: See your current personality summary
+- analyze_my_patterns: Deep analysis of your experience patterns - find what you excel at
+- get_pattern_summary: Quick summary of your performance patterns
+- get_quick_context: Fast check of your current state (mood, confidence, style)
+- get_full_context: Comprehensive context including patterns and state
 
 HOW TO USE SELF-AWARENESS:
 - Log experiences after completing tasks to build your history

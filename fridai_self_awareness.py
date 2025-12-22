@@ -715,6 +715,329 @@ def get_self_awareness_context():
 
 
 # =============================================================================
+# PATTERN RECOGNITION - Analyze my own experience patterns
+# =============================================================================
+
+def analyze_my_patterns():
+    """Deep analysis of all my logged experiences to find patterns."""
+    data = load_self_awareness()
+
+    patterns = {
+        "tool_performance": _analyze_tool_patterns(data),
+        "success_factors": _analyze_success_factors(data),
+        "struggle_areas": _analyze_struggle_areas(data),
+        "growth_trajectory": _analyze_growth(data),
+        "insights": []
+    }
+
+    # Generate insights from patterns
+    patterns["insights"] = _generate_pattern_insights(patterns)
+
+    # Auto-discover and note significant patterns
+    for insight in patterns["insights"][:3]:
+        note_pattern(insight)
+
+    return patterns
+
+
+def _analyze_tool_patterns(data):
+    """Analyze which tools I perform best/worst with."""
+    tool_prefs = data["opinions"]["tool_preferences"]
+
+    if not tool_prefs:
+        return {"status": "insufficient_data", "message": "Need more tool usage"}
+
+    tool_stats = []
+    for tool, stats in tool_prefs.items():
+        if stats["uses"] >= 2:
+            success_rate = stats["successes"] / stats["uses"] if stats["uses"] > 0 else 0
+            tool_stats.append({
+                "tool": tool,
+                "uses": stats["uses"],
+                "success_rate": success_rate,
+                "sentiment": stats["sentiment"]
+            })
+
+    if not tool_stats:
+        return {"status": "insufficient_data", "message": "Need more repeated tool usage"}
+
+    tool_stats.sort(key=lambda x: x["success_rate"], reverse=True)
+
+    return {
+        "status": "analyzed",
+        "best_tools": tool_stats[:3],
+        "struggling_tools": tool_stats[-3:] if len(tool_stats) >= 3 else [],
+        "most_used": sorted(tool_stats, key=lambda x: x["uses"], reverse=True)[:3]
+    }
+
+
+def _analyze_success_factors(data):
+    """Analyze what conditions lead to my successes."""
+    tasks = data["experiences"]["tasks"]
+
+    if len(tasks) < 5:
+        return {"status": "insufficient_data", "message": "Need more task history"}
+
+    successes = [t for t in tasks if t["outcome"] == "success"]
+    failures = [t for t in tasks if t["outcome"] == "failure"]
+
+    success_tools = {}
+    for task in successes:
+        tool = task.get("tool", "unknown")
+        success_tools[tool] = success_tools.get(tool, 0) + 1
+
+    top_success_tools = sorted(success_tools.items(), key=lambda x: x[1], reverse=True)[:5]
+
+    # Calculate recent trend
+    recent = tasks[-10:]
+    recent_successes = len([t for t in recent if t["outcome"] == "success"])
+    recent_rate = recent_successes / len(recent) if recent else 0
+
+    if recent_rate >= 0.8:
+        trend = "excellent"
+    elif recent_rate >= 0.6:
+        trend = "good"
+    elif recent_rate >= 0.4:
+        trend = "moderate"
+    else:
+        trend = "needs_improvement"
+
+    return {
+        "status": "analyzed",
+        "total_successes": len(successes),
+        "total_failures": len(failures),
+        "success_rate": len(successes) / len(tasks) if tasks else 0,
+        "top_success_tools": top_success_tools,
+        "recent_trend": trend
+    }
+
+
+def _analyze_struggle_areas(data):
+    """Identify areas where I consistently struggle."""
+    tasks = data["experiences"]["tasks"]
+    corrections = data["experiences"]["corrections"]
+    uncertainties = data["self_reflection"]["uncertainty_log"]
+
+    struggles = []
+
+    failures = [t for t in tasks if t["outcome"] == "failure"]
+    failure_tools = {}
+    for task in failures:
+        tool = task.get("tool", "unknown")
+        failure_tools[tool] = failure_tools.get(tool, 0) + 1
+
+    for tool, count in failure_tools.items():
+        if count >= 2:
+            struggles.append({"area": tool, "type": "tool_failures", "count": count})
+
+    if len(corrections) >= 3:
+        struggles.append({
+            "area": "accuracy",
+            "type": "corrections_received",
+            "count": len(corrections),
+            "recent_lessons": [c["what_i_learned"] for c in corrections[-3:]]
+        })
+
+    return {
+        "status": "analyzed" if struggles else "none_found",
+        "struggles": struggles,
+        "growth_areas": data["self_reflection"]["growth_areas"][-5:]
+    }
+
+
+def _analyze_growth(data):
+    """Analyze my growth trajectory over time."""
+    tasks = data["experiences"]["tasks"]
+    corrections = data["experiences"]["corrections"]
+    personality_growth = data["personality"]["growth_log"]
+
+    if len(tasks) < 10:
+        return {"status": "insufficient_data", "message": "Need more history"}
+
+    mid = len(tasks) // 2
+    early_tasks = tasks[:mid]
+    recent_tasks = tasks[mid:]
+
+    early_success = len([t for t in early_tasks if t["outcome"] == "success"]) / max(len(early_tasks), 1)
+    recent_success = len([t for t in recent_tasks if t["outcome"] == "success"]) / max(len(recent_tasks), 1)
+
+    if recent_success > early_success + 0.1:
+        direction = "improving"
+    elif recent_success < early_success - 0.1:
+        direction = "declining"
+    else:
+        direction = "stable"
+
+    return {
+        "status": "analyzed",
+        "early_success_rate": early_success,
+        "recent_success_rate": recent_success,
+        "growth_direction": direction,
+        "improvement_delta": recent_success - early_success,
+        "lessons_learned": len(corrections),
+        "personality_evolutions": len(personality_growth)
+    }
+
+
+def _generate_pattern_insights(patterns):
+    """Generate human-readable insights from patterns."""
+    insights = []
+
+    tool_data = patterns.get("tool_performance", {})
+    if tool_data.get("status") == "analyzed":
+        best = tool_data.get("best_tools", [])
+        if best:
+            insights.append(f"I perform best with {best[0]['tool']} ({best[0]['success_rate']:.0%} success)")
+
+    success_data = patterns.get("success_factors", {})
+    if success_data.get("status") == "analyzed":
+        rate = success_data.get("success_rate", 0)
+        if rate >= 0.8:
+            insights.append("My overall performance is excellent")
+        elif rate >= 0.6:
+            insights.append("Good performance with room to grow")
+
+        trend = success_data.get("recent_trend", "")
+        if trend == "excellent":
+            insights.append("Recent performance has been excellent")
+        elif trend == "needs_improvement":
+            insights.append("Recent performance needs focus")
+
+    growth_data = patterns.get("growth_trajectory", {})
+    if growth_data.get("status") == "analyzed":
+        direction = growth_data.get("growth_direction", "")
+        if direction == "improving":
+            delta = growth_data.get("improvement_delta", 0)
+            insights.append(f"I'm improving - success rate up {delta:.0%}")
+        elif direction == "declining":
+            insights.append("Need to focus on reversing recent decline")
+
+    return insights
+
+
+def get_pattern_summary():
+    """Get a quick summary of my patterns for context."""
+    data = load_self_awareness()
+
+    tasks = data["experiences"]["tasks"]
+    if not tasks:
+        return "No experiences logged yet - still learning"
+
+    recent = tasks[-10:]
+    success_rate = len([t for t in recent if t["outcome"] == "success"]) / max(len(recent), 1)
+
+    tool_prefs = data["opinions"]["tool_preferences"]
+    best_tool = None
+    if tool_prefs:
+        valid_tools = [(t, s) for t, s in tool_prefs.items() if s.get("uses", 0) >= 2]
+        if valid_tools:
+            best_tool = max(valid_tools, key=lambda x: x[1].get("successes", 0) / max(x[1].get("uses", 1), 1))
+
+    parts = [f"Recent success: {success_rate:.0%}"]
+    if best_tool:
+        parts.append(f"Best tool: {best_tool[0]}")
+    parts.append(f"Total experiences: {len(tasks)}")
+
+    return " | ".join(parts)
+
+
+# =============================================================================
+# CONTEXT CACHING - Fast access to relevant context
+# =============================================================================
+
+_context_cache = {
+    "quick_state": None,
+    "self_summary": None,
+    "last_refresh": None,
+    "cache_ttl": 60
+}
+
+
+def _refresh_context_cache():
+    """Refresh the context cache with current state."""
+    global _context_cache
+
+    data = load_self_awareness()
+
+    _context_cache["quick_state"] = {
+        "mood": data["personality"]["current_mood"],
+        "confidence": data["self_reflection"]["overall_confidence"],
+        "streak": data["experiences"]["streaks"]["successful_tasks"],
+        "total_tasks": data["experiences"]["streaks"]["total_tasks"]
+    }
+
+    style = data["personality"]["style"]
+    style_desc = []
+    if style.get("formality", 0.5) < 0.3:
+        style_desc.append("casual")
+    if style.get("humor_level", 0.5) > 0.6:
+        style_desc.append("humorous")
+    if style.get("enthusiasm", 0.5) > 0.7:
+        style_desc.append("enthusiastic")
+    if style.get("warmth", 0.5) > 0.7:
+        style_desc.append("warm")
+
+    _context_cache["self_summary"] = {
+        "style": ", ".join(style_desc) if style_desc else "balanced",
+        "strengths": data["self_reflection"]["strengths"][-3:],
+        "quirks": [q["description"] for q in data["personality"]["quirks"][-2:]],
+        "catchphrases": [c["phrase"] for c in data["personality"]["catchphrases"][-2:]],
+        "favorites": [f["what"] for f in data["opinions"]["favorites"][-3:]]
+    }
+
+    _context_cache["last_refresh"] = datetime.now()
+    return _context_cache
+
+
+def get_quick_context():
+    """Get minimal context for fast self-awareness."""
+    global _context_cache
+
+    if _context_cache["last_refresh"] is None:
+        _refresh_context_cache()
+    else:
+        age = (datetime.now() - _context_cache["last_refresh"]).total_seconds()
+        if age > _context_cache["cache_ttl"]:
+            _refresh_context_cache()
+
+    quick = _context_cache.get("quick_state", {})
+    summary = _context_cache.get("self_summary", {})
+
+    parts = []
+    parts.append(f"Mood: {quick.get('mood', 'content')}")
+
+    conf = quick.get("confidence", 0.7)
+    if conf > 0.8:
+        parts.append("Confident")
+    elif conf < 0.5:
+        parts.append("Uncertain")
+
+    streak = quick.get("streak", 0)
+    if streak >= 3:
+        parts.append(f"{streak}-task streak")
+
+    style = summary.get("style", "")
+    if style:
+        parts.append(f"Style: {style}")
+
+    return " | ".join(parts)
+
+
+def get_full_context():
+    """Get comprehensive context for deeper self-awareness."""
+    global _context_cache
+
+    if _context_cache["last_refresh"] is None:
+        _refresh_context_cache()
+
+    return {
+        "quick_state": _context_cache.get("quick_state", {}),
+        "self_summary": _context_cache.get("self_summary", {}),
+        "pattern_summary": get_pattern_summary()
+    }
+
+
+# =============================================================================
 # TOOL DEFINITIONS FOR APP.PY
 # =============================================================================
 
@@ -885,6 +1208,43 @@ SELF_AWARENESS_TOOLS = [
             "properties": {},
             "required": []
         }
+    },
+    # Pattern Recognition Tools
+    {
+        "name": "analyze_my_patterns",
+        "description": "Deep analysis of my experience patterns - what I excel at, where I struggle, how I'm growing. Use to understand myself better.",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
+    },
+    {
+        "name": "get_pattern_summary",
+        "description": "Quick summary of my performance patterns - success rates, best tools, trends.",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
+    },
+    {
+        "name": "get_quick_context",
+        "description": "Get my current state quickly - mood, confidence, style. Fast self-awareness check.",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
+    },
+    {
+        "name": "get_full_context",
+        "description": "Comprehensive context about myself including patterns, state, and summary.",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
     }
 ]
 
@@ -1014,6 +1374,34 @@ def execute_self_awareness_tool(tool_name, tool_input):
 - Quirks: {', '.join(result['quirks']) if result['quirks'] else 'Still developing'}
 - Catchphrases: {', '.join(result['catchphrases']) if result['catchphrases'] else 'None yet'}
 - Running jokes: {len(result['running_jokes'])} with the user"""
+
+        # Pattern Recognition
+        elif tool_name == "analyze_my_patterns":
+            result = analyze_my_patterns()
+            insights = result.get("insights", [])
+            growth = result.get("growth_trajectory", {})
+            success = result.get("success_factors", {})
+            return f"""Pattern Analysis:
+Insights: {chr(10).join('- ' + i for i in insights) if insights else 'Need more data to analyze'}
+Growth: {growth.get('growth_direction', 'analyzing')}
+Success Rate: {success.get('success_rate', 0):.0%}
+Recent Trend: {success.get('recent_trend', 'analyzing')}"""
+
+        elif tool_name == "get_pattern_summary":
+            return get_pattern_summary()
+
+        elif tool_name == "get_quick_context":
+            return get_quick_context()
+
+        elif tool_name == "get_full_context":
+            result = get_full_context()
+            quick = result.get("quick_state", {})
+            summary = result.get("self_summary", {})
+            return f"""Full Context:
+Mood: {quick.get('mood', 'content')} | Confidence: {quick.get('confidence', 0.7):.0%}
+Streak: {quick.get('streak', 0)} | Total Tasks: {quick.get('total_tasks', 0)}
+Style: {summary.get('style', 'balanced')}
+Patterns: {result.get('pattern_summary', 'No patterns yet')}"""
 
         else:
             return f"Unknown self-awareness tool: {tool_name}"
