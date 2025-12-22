@@ -1,4 +1,4 @@
-const CACHE_NAME = 'fridai-v100';
+const CACHE_NAME = 'fridai-v102';
 const CORE_ASSETS = [
   '/',
   '/icon-192.png',

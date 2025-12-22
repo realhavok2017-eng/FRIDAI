@@ -38,6 +38,17 @@ DEDUP_WINDOW_SECONDS = 3
 REMINDERS_FILE = os.path.join(APP_DIR, "reminders.json")
 active_reminders = []
 
+# UI State tracking - so FRIDAY can see herself
+ui_state = {
+    'mood': 'chill',
+    'theme': 'default',
+    'is_listening': False,
+    'is_speaking': False,
+    'is_sleeping': False,
+    'connection_status': 'connected',
+    'last_updated': None
+}
+
 # Long-term memory system
 USER_PROFILE_FILE = os.path.join(APP_DIR, "user_profile.json")
 MEMORY_BANK_FILE = os.path.join(APP_DIR, "memory_bank.json")
@@ -1976,6 +1987,15 @@ TOOLS = [
             "required": []
         }
     },
+    {
+        "name": "check_my_appearance",
+        "description": "Check your own current visual state - what mood you're displaying, current theme, whether you're listening/speaking. Use this when the user asks about your appearance or you want to verify your visual state.",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
+    },
 ]
 
 # ==============================================================================
@@ -3107,6 +3127,43 @@ def execute_tool(tool_name, tool_input):
             except Exception as e:
                 return f"Error adjusting voice: {str(e)}"
 
+        elif tool_name == "check_my_appearance":
+            try:
+                mood_descriptions = {
+                    'chill': 'calm blue glow, slowly pulsing - relaxed and peaceful',
+                    'listening': 'bright green, expanded and alert - actively hearing',
+                    'thinking': 'purple with spinning rings - processing information',
+                    'speaking': 'warm red/coral, pulsing with voice - talking to user',
+                    'working': 'amber/orange, busy animations - executing a task',
+                    'searching': 'cyan with scanning effect - looking up information',
+                    'success': 'golden burst - just completed something',
+                    'confused': 'red flash - encountered an error or misunderstanding',
+                    'sleeping': 'dim grey - in sleep mode, waiting for wake word',
+                    'attentive': 'teal, slightly expanded - ready and alert'
+                }
+                
+                state = ui_state.copy()
+                mood = state.get('mood', 'chill')
+                mood_desc = mood_descriptions.get(mood, 'unknown state')
+                
+                status_parts = []
+                if state.get('is_listening'):
+                    status_parts.append('currently listening')
+                if state.get('is_speaking'):
+                    status_parts.append('currently speaking')
+                if state.get('is_sleeping'):
+                    status_parts.append('in sleep mode')
+                
+                status = ', '.join(status_parts) if status_parts else 'idle'
+                
+                return f"""My current visual state:
+- Mood: {mood} ({mood_desc})
+- Theme: {state.get('theme', 'default')}
+- Status: {status}
+- Last updated: {state.get('last_updated', 'never')}"""
+            except Exception as e:
+                return f"Error checking appearance: {str(e)}"
+
         return "Unknown tool"
     except Exception as e:
         return f"Error: {str(e)}"
@@ -3225,6 +3282,30 @@ def index():
 @app.route('/health')
 def health():
     return jsonify({'status': 'ok', 'message': 'FRIDAY is online'})
+
+@app.route('/ui_state', methods=['GET'])
+def get_ui_state():
+    """Get current UI state - so FRIDAY can see herself."""
+    return jsonify(ui_state)
+
+@app.route('/ui_state', methods=['POST'])
+def update_ui_state():
+    """Update UI state from frontend."""
+    global ui_state
+    import datetime
+    data = request.json
+    if 'mood' in data:
+        ui_state['mood'] = data['mood']
+    if 'theme' in data:
+        ui_state['theme'] = data['theme']
+    if 'is_listening' in data:
+        ui_state['is_listening'] = data['is_listening']
+    if 'is_speaking' in data:
+        ui_state['is_speaking'] = data['is_speaking']
+    if 'is_sleeping' in data:
+        ui_state['is_sleeping'] = data['is_sleeping']
+    ui_state['last_updated'] = datetime.datetime.now().isoformat()
+    return jsonify({'success': True, 'state': ui_state})
 
 @app.route('/transcribe', methods=['POST'])
 def transcribe():

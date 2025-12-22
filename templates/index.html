@@ -2553,6 +2553,19 @@
             connectionCheckInterval = setInterval(checkConnection, 30000);
         }
         
+        // Report UI state to backend so FRIDAY can see herself
+        async function reportUIState(stateUpdate) {
+            try {
+                await fetch('/ui_state', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(stateUpdate)
+                });
+            } catch (e) {
+                // Silently fail - not critical
+            }
+        }
+        
         // Reminders panel functions
         function toggleRemindersPanel() {
             const panel = document.getElementById('remindersPanel');
@@ -3461,6 +3474,9 @@
                 avatar.classList.add(state);
             }
             currentAvatarState = state;
+            
+            // Report state to backend so FRIDAY can see herself
+            reportUIState({ mood: state });
 
             // Update status text
             const statusTexts = {
@@ -3925,6 +3941,9 @@
             if (themeName !== 'default') {
                 document.body.classList.add('theme-' + themeName);
             }
+            
+            // Report to backend
+            reportUIState({ theme: themeName });
 
             // Save preference
             localStorage.setItem('fridayTheme', themeName);
