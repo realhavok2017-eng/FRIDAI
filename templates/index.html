@@ -991,20 +991,572 @@
         }
 
         /* ============================================
-           FRIDAY AI AVATAR - LIVING PRESENCE
+           FRIDAY AI AVATAR - HOLOGRAPHIC FACE
            ============================================ */
 
         /* Main Avatar Container */
         .friday-avatar-container {
             position: relative;
             width: 120px;
-            height: 120px;
+            height: 160px;
             margin: 0 auto 5px;
             cursor: pointer;
             -webkit-tap-highlight-color: transparent;
         }
 
-        /* Ambient Glow Layer */
+        /* Holographic Glow */
+        .holo-glow {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 160px;
+            height: 200px;
+            transform: translate(-50%, -50%);
+            background: radial-gradient(ellipse, rgba(0, 217, 255, 0.25) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: holo-pulse 4s ease-in-out infinite;
+            pointer-events: none;
+        }
+
+        @keyframes holo-pulse {
+            0%, 100% { opacity: 0.6; transform: translate(-50%, -50%) scale(1); }
+            50% { opacity: 0.9; transform: translate(-50%, -50%) scale(1.05); }
+        }
+
+        /* Face Container */
+        .holo-face {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 100px;
+            height: 130px;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(180deg,
+                rgba(0, 40, 60, 0.4) 0%,
+                rgba(0, 60, 80, 0.3) 50%,
+                rgba(0, 40, 60, 0.2) 100%);
+            border: 1px solid rgba(0, 217, 255, 0.4);
+            border-radius: 50px 50px 45px 45px;
+            box-shadow:
+                0 0 20px rgba(0, 217, 255, 0.5),
+                0 0 40px rgba(0, 217, 255, 0.2),
+                inset 0 0 30px rgba(0, 217, 255, 0.1);
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        /* Eyebrows */
+        .holo-eyebrow {
+            position: absolute;
+            top: 28px;
+            width: 22px;
+            height: 4px;
+            background: linear-gradient(90deg, transparent, rgba(0, 217, 255, 0.9), transparent);
+            border-radius: 2px;
+            transition: all 0.3s ease;
+        }
+
+        .holo-eyebrow.left {
+            left: 18px;
+            transform: rotate(-5deg);
+        }
+
+        .holo-eyebrow.right {
+            right: 18px;
+            transform: rotate(5deg);
+        }
+
+        /* Eyes */
+        .holo-eye {
+            position: absolute;
+            top: 42px;
+            width: 24px;
+            height: 16px;
+            background: radial-gradient(ellipse,
+                rgba(255, 255, 255, 0.95) 0%,
+                rgba(0, 217, 255, 0.8) 40%,
+                rgba(0, 150, 200, 0.6) 70%,
+                rgba(0, 100, 150, 0.4) 100%);
+            border-radius: 50%;
+            box-shadow:
+                0 0 10px rgba(0, 217, 255, 0.8),
+                0 0 20px rgba(0, 217, 255, 0.4);
+            animation: eye-blink 4s ease-in-out infinite;
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+
+        .holo-eye.left {
+            left: 18px;
+        }
+
+        .holo-eye.right {
+            right: 18px;
+        }
+
+        /* Pupils */
+        .holo-pupil {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 8px;
+            height: 10px;
+            background: radial-gradient(ellipse,
+                #001a33 0%,
+                #003366 60%,
+                #004488 100%);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 4px rgba(0, 50, 100, 0.8);
+            transition: all 0.2s ease;
+        }
+
+        /* Eye Highlight */
+        .holo-eye-highlight {
+            position: absolute;
+            top: 3px;
+            left: 5px;
+            width: 5px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 50%;
+        }
+
+        /* Blink Animation */
+        @keyframes eye-blink {
+            0%, 45%, 55%, 100% { transform: scaleY(1); }
+            50% { transform: scaleY(0.1); }
+        }
+
+        /* Nose (subtle vertical line) */
+        .holo-nose {
+            position: absolute;
+            top: 65px;
+            left: 50%;
+            width: 2px;
+            height: 20px;
+            background: linear-gradient(180deg,
+                transparent 0%,
+                rgba(0, 217, 255, 0.3) 30%,
+                rgba(0, 217, 255, 0.2) 70%,
+                transparent 100%);
+            transform: translateX(-50%);
+        }
+
+        /* Mouth */
+        .holo-mouth {
+            position: absolute;
+            bottom: 25px;
+            left: 50%;
+            width: 30px;
+            height: 12px;
+            transform: translateX(-50%);
+            transition: all 0.3s ease;
+        }
+
+        .holo-mouth-line {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg,
+                transparent 0%,
+                rgba(0, 217, 255, 0.7) 20%,
+                rgba(0, 217, 255, 0.9) 50%,
+                rgba(0, 217, 255, 0.7) 80%,
+                transparent 100%);
+            border-radius: 3px;
+            transform: translate(-50%, -50%);
+            transition: all 0.2s ease;
+        }
+
+        /* Smile curve */
+        .holo-mouth-line::before {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 50%;
+            width: 20px;
+            height: 8px;
+            border: 2px solid transparent;
+            border-bottom-color: rgba(0, 217, 255, 0.5);
+            border-radius: 0 0 20px 20px;
+            transform: translateX(-50%);
+            transition: all 0.3s ease;
+        }
+
+        /* Holographic Scanlines */
+        .holo-scanlines {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent 0px,
+                transparent 2px,
+                rgba(0, 217, 255, 0.03) 2px,
+                rgba(0, 217, 255, 0.03) 4px
+            );
+            pointer-events: none;
+            opacity: 0.7;
+        }
+
+        /* Holographic Flicker */
+        .holo-flicker {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: transparent;
+            pointer-events: none;
+            animation: holo-flicker-anim 8s linear infinite;
+        }
+
+        @keyframes holo-flicker-anim {
+            0%, 100% { opacity: 0; }
+            5% { opacity: 0.02; background: rgba(0, 217, 255, 0.1); }
+            5.5% { opacity: 0; }
+            45% { opacity: 0; }
+            45.5% { opacity: 0.03; background: rgba(255, 255, 255, 0.05); }
+            46% { opacity: 0; }
+            78% { opacity: 0; }
+            78.2% { opacity: 0.02; background: rgba(0, 217, 255, 0.08); }
+            78.5% { opacity: 0; }
+        }
+
+        /* ============================================
+           HOLOGRAPHIC FACE EXPRESSIONS
+           ============================================ */
+
+        /* LISTENING - Wide eyes, alert, green tint */
+        .friday-avatar-container.listening .holo-face {
+            border-color: rgba(0, 255, 136, 0.6);
+            box-shadow: 0 0 25px rgba(0, 255, 136, 0.6), 0 0 50px rgba(0, 255, 136, 0.3);
+        }
+        .friday-avatar-container.listening .holo-glow {
+            background: radial-gradient(ellipse, rgba(0, 255, 136, 0.3) 0%, transparent 70%);
+        }
+        .friday-avatar-container.listening .holo-eye {
+            transform: scaleY(1.15) scaleX(1.1);
+            background: radial-gradient(ellipse, rgba(255,255,255,0.95) 0%, rgba(0,255,136,0.8) 40%, rgba(0,200,100,0.6) 100%);
+            box-shadow: 0 0 15px rgba(0, 255, 136, 0.9);
+            animation: eye-blink-fast 3s ease-in-out infinite;
+        }
+        .friday-avatar-container.listening .holo-eyebrow {
+            transform: translateY(-3px);
+            background: linear-gradient(90deg, transparent, rgba(0, 255, 136, 0.9), transparent);
+        }
+        .friday-avatar-container.listening .holo-eyebrow.left { transform: translateY(-3px) rotate(-8deg); }
+        .friday-avatar-container.listening .holo-eyebrow.right { transform: translateY(-3px) rotate(8deg); }
+        .friday-avatar-container.listening .holo-mouth-line {
+            background: linear-gradient(90deg, transparent, rgba(0, 255, 136, 0.8), transparent);
+        }
+        @keyframes eye-blink-fast {
+            0%, 40%, 60%, 100% { transform: scaleY(1.15) scaleX(1.1); }
+            50% { transform: scaleY(0.1) scaleX(1.1); }
+        }
+
+        /* THINKING - Eyes look up, one eyebrow raised, purple tint */
+        .friday-avatar-container.thinking .holo-face {
+            border-color: rgba(153, 102, 255, 0.6);
+            box-shadow: 0 0 25px rgba(153, 102, 255, 0.5), 0 0 50px rgba(102, 126, 234, 0.3);
+        }
+        .friday-avatar-container.thinking .holo-glow {
+            background: radial-gradient(ellipse, rgba(153, 102, 255, 0.3) 0%, transparent 70%);
+            animation: holo-pulse 2s ease-in-out infinite;
+        }
+        .friday-avatar-container.thinking .holo-eye {
+            background: radial-gradient(ellipse, rgba(255,255,255,0.95) 0%, rgba(153,102,255,0.8) 40%, rgba(102,126,234,0.6) 100%);
+            box-shadow: 0 0 12px rgba(153, 102, 255, 0.8);
+            animation: none;
+        }
+        .friday-avatar-container.thinking .holo-pupil {
+            animation: pupil-think 2s ease-in-out infinite;
+        }
+        @keyframes pupil-think {
+            0%, 100% { transform: translate(-50%, -50%); }
+            25% { transform: translate(-30%, -70%); }
+            50% { transform: translate(-70%, -60%); }
+            75% { transform: translate(-50%, -50%); }
+        }
+        .friday-avatar-container.thinking .holo-eyebrow.left {
+            transform: rotate(-12deg) translateY(-4px);
+            background: linear-gradient(90deg, transparent, rgba(153, 102, 255, 0.9), transparent);
+        }
+        .friday-avatar-container.thinking .holo-eyebrow.right {
+            transform: rotate(2deg);
+            background: linear-gradient(90deg, transparent, rgba(153, 102, 255, 0.9), transparent);
+        }
+        .friday-avatar-container.thinking .holo-mouth-line {
+            width: 70%;
+            background: linear-gradient(90deg, transparent, rgba(153, 102, 255, 0.7), transparent);
+        }
+
+        /* SPEAKING - Mouth animates, warm red/coral */
+        .friday-avatar-container.speaking .holo-face {
+            border-color: rgba(255, 107, 107, 0.6);
+            box-shadow: 0 0 25px rgba(255, 107, 107, 0.5), 0 0 50px rgba(255, 71, 87, 0.3);
+        }
+        .friday-avatar-container.speaking .holo-glow {
+            background: radial-gradient(ellipse, rgba(255, 107, 107, 0.3) 0%, transparent 70%);
+            animation: speak-glow-face 0.3s ease-in-out infinite alternate;
+        }
+        @keyframes speak-glow-face {
+            0% { opacity: 0.6; transform: translate(-50%, -50%) scale(1); }
+            100% { opacity: 0.9; transform: translate(-50%, -50%) scale(1.08); }
+        }
+        .friday-avatar-container.speaking .holo-eye {
+            background: radial-gradient(ellipse, rgba(255,255,255,0.95) 0%, rgba(255,150,150,0.7) 40%, rgba(255,100,100,0.5) 100%);
+            box-shadow: 0 0 12px rgba(255, 107, 107, 0.8);
+            animation: none;
+        }
+        .friday-avatar-container.speaking .holo-eyebrow {
+            background: linear-gradient(90deg, transparent, rgba(255, 107, 107, 0.9), transparent);
+        }
+        .friday-avatar-container.speaking .holo-mouth {
+            animation: mouth-speak 0.15s ease-in-out infinite alternate;
+        }
+        @keyframes mouth-speak {
+            0% { transform: translateX(-50%) scaleY(1); }
+            100% { transform: translateX(-50%) scaleY(1.8); }
+        }
+        .friday-avatar-container.speaking .holo-mouth-line {
+            height: 5px;
+            background: linear-gradient(90deg, transparent, rgba(255, 107, 107, 0.9), transparent);
+        }
+        .friday-avatar-container.speaking .holo-mouth-line::before {
+            border-bottom-color: rgba(255, 107, 107, 0.6);
+        }
+
+        /* SLEEPING - Eyes closed, dim, peaceful */
+        .friday-avatar-container.sleeping .holo-face {
+            border-color: rgba(100, 100, 120, 0.3);
+            box-shadow: 0 0 10px rgba(100, 100, 120, 0.2);
+            filter: brightness(0.6);
+        }
+        .friday-avatar-container.sleeping .holo-glow {
+            background: radial-gradient(ellipse, rgba(80, 80, 100, 0.15) 0%, transparent 70%);
+            opacity: 0.4;
+        }
+        .friday-avatar-container.sleeping .holo-eye {
+            transform: scaleY(0.1);
+            background: rgba(100, 100, 120, 0.3);
+            box-shadow: 0 0 5px rgba(100, 100, 120, 0.3);
+            animation: none;
+        }
+        .friday-avatar-container.sleeping .holo-eyebrow {
+            transform: translateY(2px) rotate(0deg);
+            opacity: 0.4;
+            background: linear-gradient(90deg, transparent, rgba(100, 100, 120, 0.5), transparent);
+        }
+        .friday-avatar-container.sleeping .holo-mouth-line {
+            opacity: 0.4;
+            background: linear-gradient(90deg, transparent, rgba(100, 100, 120, 0.5), transparent);
+        }
+        .friday-avatar-container.sleeping .holo-mouth-line::before {
+            opacity: 0;
+        }
+
+        /* CHILL - Relaxed, default cyan, slight smile */
+        .friday-avatar-container.chill .holo-eye {
+            animation: eye-blink 5s ease-in-out infinite;
+        }
+        .friday-avatar-container.chill .holo-face {
+            animation: face-breathe 4s ease-in-out infinite;
+        }
+        @keyframes face-breathe {
+            0%, 100% { box-shadow: 0 0 20px rgba(0, 217, 255, 0.5), 0 0 40px rgba(0, 217, 255, 0.2); }
+            50% { box-shadow: 0 0 25px rgba(0, 217, 255, 0.6), 0 0 50px rgba(0, 217, 255, 0.3); }
+        }
+
+        /* WORKING - Focused, intense orange, determined */
+        .friday-avatar-container.working .holo-face {
+            border-color: rgba(255, 170, 51, 0.6);
+            box-shadow: 0 0 25px rgba(255, 170, 51, 0.6), 0 0 50px rgba(255, 140, 0, 0.3);
+        }
+        .friday-avatar-container.working .holo-glow {
+            background: radial-gradient(ellipse, rgba(255, 170, 51, 0.3) 0%, transparent 70%);
+            animation: holo-pulse 1.5s ease-in-out infinite;
+        }
+        .friday-avatar-container.working .holo-eye {
+            transform: scaleY(0.85);
+            background: radial-gradient(ellipse, rgba(255,255,255,0.95) 0%, rgba(255,170,51,0.8) 40%, rgba(255,140,0,0.6) 100%);
+            box-shadow: 0 0 12px rgba(255, 170, 51, 0.9);
+            animation: none;
+        }
+        .friday-avatar-container.working .holo-eyebrow {
+            transform: translateY(2px) rotate(0deg);
+            background: linear-gradient(90deg, transparent, rgba(255, 170, 51, 0.9), transparent);
+        }
+        .friday-avatar-container.working .holo-eyebrow.left { transform: translateY(2px) rotate(-8deg); }
+        .friday-avatar-container.working .holo-eyebrow.right { transform: translateY(2px) rotate(8deg); }
+        .friday-avatar-container.working .holo-mouth-line {
+            width: 80%;
+            background: linear-gradient(90deg, transparent, rgba(255, 170, 51, 0.8), transparent);
+        }
+
+        /* SEARCHING - Eyes sweep left/right, cyan-blue */
+        .friday-avatar-container.searching .holo-face {
+            border-color: rgba(0, 221, 255, 0.6);
+            box-shadow: 0 0 25px rgba(0, 221, 255, 0.6), 0 0 50px rgba(0, 180, 255, 0.3);
+        }
+        .friday-avatar-container.searching .holo-glow {
+            background: radial-gradient(ellipse, rgba(0, 221, 255, 0.35) 0%, transparent 70%);
+            animation: holo-pulse 1s ease-in-out infinite;
+        }
+        .friday-avatar-container.searching .holo-eye {
+            background: radial-gradient(ellipse, rgba(255,255,255,0.95) 0%, rgba(0,221,255,0.8) 40%, rgba(0,180,255,0.6) 100%);
+            box-shadow: 0 0 15px rgba(0, 221, 255, 0.9);
+            animation: none;
+        }
+        .friday-avatar-container.searching .holo-pupil {
+            animation: pupil-search 1.5s ease-in-out infinite;
+        }
+        @keyframes pupil-search {
+            0%, 100% { transform: translate(-50%, -50%); }
+            25% { transform: translate(-20%, -50%); }
+            75% { transform: translate(-80%, -50%); }
+        }
+        .friday-avatar-container.searching .holo-eyebrow {
+            background: linear-gradient(90deg, transparent, rgba(0, 221, 255, 0.9), transparent);
+        }
+
+        /* SUCCESS - Big smile, happy eyes, gold */
+        .friday-avatar-container.success .holo-face {
+            border-color: rgba(255, 204, 0, 0.7);
+            box-shadow: 0 0 30px rgba(255, 204, 0, 0.7), 0 0 60px rgba(255, 180, 0, 0.4);
+            animation: success-flash 0.5s ease-out;
+        }
+        @keyframes success-flash {
+            0% { filter: brightness(1.5); }
+            100% { filter: brightness(1); }
+        }
+        .friday-avatar-container.success .holo-glow {
+            background: radial-gradient(ellipse, rgba(255, 204, 0, 0.4) 0%, transparent 70%);
+        }
+        .friday-avatar-container.success .holo-eye {
+            transform: scaleY(0.6) scaleX(1.1);
+            background: radial-gradient(ellipse, rgba(255,255,255,0.95) 0%, rgba(255,204,0,0.8) 40%, rgba(255,180,0,0.6) 100%);
+            box-shadow: 0 0 15px rgba(255, 204, 0, 0.9);
+            border-radius: 50% 50% 50% 50% / 20% 20% 80% 80%;
+            animation: none;
+        }
+        .friday-avatar-container.success .holo-eyebrow {
+            transform: translateY(-5px);
+            background: linear-gradient(90deg, transparent, rgba(255, 204, 0, 0.9), transparent);
+        }
+        .friday-avatar-container.success .holo-eyebrow.left { transform: translateY(-5px) rotate(-10deg); }
+        .friday-avatar-container.success .holo-eyebrow.right { transform: translateY(-5px) rotate(10deg); }
+        .friday-avatar-container.success .holo-mouth {
+            width: 40px;
+        }
+        .friday-avatar-container.success .holo-mouth-line {
+            height: 4px;
+            background: linear-gradient(90deg, transparent, rgba(255, 204, 0, 0.9), transparent);
+        }
+        .friday-avatar-container.success .holo-mouth-line::before {
+            width: 30px;
+            height: 12px;
+            border-bottom-color: rgba(255, 204, 0, 0.8);
+        }
+
+        /* CONFUSED - Furrowed brows, asymmetric, red tint */
+        .friday-avatar-container.confused .holo-face {
+            border-color: rgba(255, 102, 102, 0.5);
+            box-shadow: 0 0 20px rgba(255, 102, 102, 0.4);
+            animation: confused-shake 0.3s ease-in-out infinite;
+        }
+        @keyframes confused-shake {
+            0%, 100% { transform: translate(-50%, -50%) rotate(0deg); }
+            25% { transform: translate(-50%, -50%) rotate(2deg); }
+            75% { transform: translate(-50%, -50%) rotate(-2deg); }
+        }
+        .friday-avatar-container.confused .holo-glow {
+            background: radial-gradient(ellipse, rgba(255, 102, 102, 0.25) 0%, transparent 70%);
+        }
+        .friday-avatar-container.confused .holo-eye {
+            background: radial-gradient(ellipse, rgba(255,255,255,0.95) 0%, rgba(255,150,150,0.7) 40%, rgba(255,100,100,0.5) 100%);
+            animation: none;
+        }
+        .friday-avatar-container.confused .holo-eye.left {
+            transform: scaleY(1.1);
+        }
+        .friday-avatar-container.confused .holo-eye.right {
+            transform: scaleY(0.9);
+        }
+        .friday-avatar-container.confused .holo-eyebrow {
+            background: linear-gradient(90deg, transparent, rgba(255, 102, 102, 0.9), transparent);
+        }
+        .friday-avatar-container.confused .holo-eyebrow.left {
+            transform: rotate(15deg) translateY(3px);
+        }
+        .friday-avatar-container.confused .holo-eyebrow.right {
+            transform: rotate(-15deg) translateY(3px);
+        }
+        .friday-avatar-container.confused .holo-mouth-line {
+            background: linear-gradient(90deg, transparent, rgba(255, 102, 102, 0.7), transparent);
+        }
+        .friday-avatar-container.confused .holo-mouth-line::before {
+            transform: translateX(-50%) rotate(180deg);
+            border-bottom-color: rgba(255, 102, 102, 0.5);
+        }
+
+        /* ATTENTIVE - Ready, bright, alert teal */
+        .friday-avatar-container.attentive .holo-face {
+            border-color: rgba(0, 221, 170, 0.6);
+            box-shadow: 0 0 25px rgba(0, 221, 170, 0.5), 0 0 50px rgba(0, 200, 150, 0.3);
+        }
+        .friday-avatar-container.attentive .holo-glow {
+            background: radial-gradient(ellipse, rgba(0, 221, 170, 0.3) 0%, transparent 70%);
+        }
+        .friday-avatar-container.attentive .holo-eye {
+            transform: scaleY(1.1);
+            background: radial-gradient(ellipse, rgba(255,255,255,0.95) 0%, rgba(0,221,170,0.8) 40%, rgba(0,200,150,0.6) 100%);
+            box-shadow: 0 0 12px rgba(0, 221, 170, 0.8);
+            animation: eye-blink 3.5s ease-in-out infinite;
+        }
+        .friday-avatar-container.attentive .holo-eyebrow {
+            transform: translateY(-2px);
+            background: linear-gradient(90deg, transparent, rgba(0, 221, 170, 0.9), transparent);
+        }
+        .friday-avatar-container.attentive .holo-mouth-line {
+            background: linear-gradient(90deg, transparent, rgba(0, 221, 170, 0.8), transparent);
+        }
+        .friday-avatar-container.attentive .holo-mouth-line::before {
+            border-bottom-color: rgba(0, 221, 170, 0.6);
+        }
+
+        /* PREPARING - Building up, orange/coral */
+        .friday-avatar-container.preparing .holo-face {
+            border-color: rgba(255, 170, 102, 0.6);
+            box-shadow: 0 0 25px rgba(255, 170, 102, 0.5);
+            animation: preparing-pulse 0.8s ease-in-out infinite;
+        }
+        @keyframes preparing-pulse {
+            0%, 100% { box-shadow: 0 0 25px rgba(255, 170, 102, 0.5); }
+            50% { box-shadow: 0 0 35px rgba(255, 170, 102, 0.8); }
+        }
+        .friday-avatar-container.preparing .holo-glow {
+            background: radial-gradient(ellipse, rgba(255, 170, 102, 0.3) 0%, transparent 70%);
+            animation: holo-pulse 0.8s ease-in-out infinite;
+        }
+        .friday-avatar-container.preparing .holo-eye {
+            background: radial-gradient(ellipse, rgba(255,255,255,0.95) 0%, rgba(255,170,102,0.8) 40%, rgba(255,140,80,0.6) 100%);
+            box-shadow: 0 0 12px rgba(255, 170, 102, 0.8);
+            animation: none;
+        }
+        .friday-avatar-container.preparing .holo-eyebrow {
+            background: linear-gradient(90deg, transparent, rgba(255, 170, 102, 0.9), transparent);
+        }
+        .friday-avatar-container.preparing .holo-mouth-line {
+            background: linear-gradient(90deg, transparent, rgba(255, 170, 102, 0.8), transparent);
+        }
+
+        /* OLD ORB AVATAR STYLES - KEEPING FOR REFERENCE */
         .avatar-glow {
             position: absolute;
             top: 50%;
@@ -1986,7 +2538,7 @@
             position: relative;
             width: 100%;
             max-width: 300px;
-            height: 200px;
+            height: 220px;
             margin: 0 auto 10px;
             display: flex;
             justify-content: center;
@@ -2422,45 +2974,44 @@
             </div>
         </header>
 
-        <!-- FRIDAY Avatar - Living AI Presence with Spatial Awareness -->
+        <!-- FRIDAY Avatar - Holographic Face with Spatial Awareness -->
         <div class="spatial-field" id="spatialField">
             <div class="friday-avatar-container" id="fridayAvatar"
                  ontouchstart="handleAvatarStart(event)"
                  ontouchend="handleAvatarEnd(event)"
                  onmousedown="handleAvatarStart(event)"
                  onmouseup="handleAvatarEnd(event)">
-                <!-- Ambient Glow -->
-                <div class="avatar-glow"></div>
-                <!-- Orbital Rings -->
-                <div class="avatar-ring-outer"></div>
-                <div class="avatar-ring-middle"></div>
-                <div class="avatar-ring-inner"></div>
-                <!-- Energy Field -->
-                <div class="avatar-energy"></div>
-                <!-- Arc Reactor Lines -->
-                <div class="avatar-arc-lines">
-                    <div class="arc-line"></div>
-                    <div class="arc-line"></div>
-                    <div class="arc-line"></div>
-                    <div class="arc-line"></div>
-                    <div class="arc-line"></div>
-                    <div class="arc-line"></div>
-                    <div class="arc-line"></div>
-                    <div class="arc-line"></div>
+                <!-- Holographic Glow -->
+                <div class="holo-glow"></div>
+
+                <!-- Face Container -->
+                <div class="holo-face">
+                    <!-- Eyebrows -->
+                    <div class="holo-eyebrow left"></div>
+                    <div class="holo-eyebrow right"></div>
+
+                    <!-- Eyes -->
+                    <div class="holo-eye left">
+                        <div class="holo-pupil"></div>
+                        <div class="holo-eye-highlight"></div>
+                    </div>
+                    <div class="holo-eye right">
+                        <div class="holo-pupil"></div>
+                        <div class="holo-eye-highlight"></div>
+                    </div>
+
+                    <!-- Nose (subtle) -->
+                    <div class="holo-nose"></div>
+
+                    <!-- Mouth -->
+                    <div class="holo-mouth">
+                        <div class="holo-mouth-line"></div>
+                    </div>
                 </div>
-                <!-- Core -->
-                <div class="avatar-core"></div>
-                <!-- Orbiting Particles -->
-                <div class="avatar-particles">
-                    <div class="particle"></div>
-                    <div class="particle"></div>
-                    <div class="particle"></div>
-                    <div class="particle"></div>
-                    <div class="particle"></div>
-                    <div class="particle"></div>
-                    <div class="particle"></div>
-                    <div class="particle"></div>
-                </div>
+
+                <!-- Holographic Effects -->
+                <div class="holo-scanlines"></div>
+                <div class="holo-flicker"></div>
             </div>
         </div>
         <div class="avatar-status" id="avatarStatus">Tap to speak</div>
