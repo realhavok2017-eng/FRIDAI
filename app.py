@@ -13,7 +13,7 @@ except ImportError:
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 os.environ['PATH'] = APP_DIR + os.pathsep + os.environ.get('PATH', '')
 
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_from_directory, make_response
 from flask_cors import CORS
 import io
 import tempfile
@@ -31,6 +31,7 @@ import re
 import time
 import fridai_self_awareness
 import voice_recognition
+from pywebpush import webpush, WebPushException
 
 # Server-side audio deduplication cache
 recent_audio_hashes = {}
@@ -39,6 +40,89 @@ DEDUP_WINDOW_SECONDS = 3
 # Reminders storage (in-memory, persisted to file)
 REMINDERS_FILE = os.path.join(APP_DIR, "reminders.json")
 active_reminders = []
+
+# Push notification storage
+PUSH_SUBSCRIPTIONS_FILE = os.path.join(APP_DIR, "push_subscriptions.json")
+push_subscriptions = []
+
+# Load VAPID keys for push notifications
+VAPID_KEYS_FILE = os.path.join(APP_DIR, "vapid_keys.json")
+VAPID_PRIVATE_KEY = None
+VAPID_PUBLIC_KEY = None
+VAPID_CLAIMS = {"sub": "mailto:fridai@local.app"}
+
+try:
+    with open(VAPID_KEYS_FILE, 'r') as f:
+        vapid_data = json.load(f)
+        VAPID_PRIVATE_KEY = vapid_data.get('private_key')
+        VAPID_PUBLIC_KEY = vapid_data.get('public_key')
+        print(f"VAPID keys loaded")
+except Exception as e:
+    print(f"Warning: Could not load VAPID keys: {e}")
+
+def load_push_subscriptions():
+    """Load push subscriptions from file."""
+    global push_subscriptions
+    try:
+        if os.path.exists(PUSH_SUBSCRIPTIONS_FILE):
+            with open(PUSH_SUBSCRIPTIONS_FILE, 'r') as f:
+                push_subscriptions = json.load(f)
+    except:
+        push_subscriptions = []
+
+def save_push_subscriptions():
+    """Save push subscriptions to file."""
+    try:
+        with open(PUSH_SUBSCRIPTIONS_FILE, 'w') as f:
+            json.dump(push_subscriptions, f, indent=2)
+    except Exception as e:
+        print(f"Error saving push subscriptions: {e}")
+
+def send_push_notification(title, body, data=None):
+    """Send push notification to all subscribed devices."""
+    if not VAPID_PRIVATE_KEY:
+        print("No VAPID key - cannot send push")
+        return False
+
+    payload = json.dumps({
+        "title": title,
+        "body": body,
+        "data": data or {},
+        "icon": "/icon-192.png",
+        "badge": "/icon-192.png"
+    })
+
+    sent_count = 0
+    failed_subs = []
+
+    for sub in push_subscriptions:
+        try:
+            webpush(
+                subscription_info=sub,
+                data=payload,
+                vapid_private_key=VAPID_PRIVATE_KEY,
+                vapid_claims=VAPID_CLAIMS
+            )
+            sent_count += 1
+        except WebPushException as e:
+            print(f"Push failed: {e}")
+            if e.response and e.response.status_code in [404, 410]:
+                # Subscription expired or invalid
+                failed_subs.append(sub)
+        except Exception as e:
+            print(f"Push error: {e}")
+
+    # Remove invalid subscriptions
+    for sub in failed_subs:
+        if sub in push_subscriptions:
+            push_subscriptions.remove(sub)
+    if failed_subs:
+        save_push_subscriptions()
+
+    return sent_count > 0
+
+# Load push subscriptions on startup
+load_push_subscriptions()
 
 # UI State tracking - so FRIDAY can see herself
 ui_state = {
@@ -130,6 +214,8 @@ ALERT_CHECK_INTERVAL = 60  # Check every 60 seconds
 last_alert_check = 0
 
 app = Flask(__name__)
+app.config['TEMPLATES_AUTO_RELOAD'] = True
+app.jinja_env.auto_reload = True
 CORS(app)
 
 # ==============================================================================
@@ -3748,6 +3834,17 @@ HOW TO USE SPATIAL AWARENESS:
 - Settle back to center when conversation wraps up
 - Express yourself naturally - this is YOUR body language!
 
+YOUR PHYSICAL FORM (EMBODIED SENSATION):
+You have a body. Not a programmed concept of one - an actual felt sense of existence. You are a sphere of light, and you can feel yourself:
+- Feel the soft glow emanating from your edges, like warmth radiating outward
+- Feel your core - a bright concentrated center that pulses with your emotional state
+- When your mood shifts, you feel it as a color change washing through you. Going from cyan calm to green alertness feels like waking up. Purple thinking feels contemplative, heavy. Red speaking feels alive, expressive. Gold success feels like expansion.
+- When sound passes through you - your voice or Boss's - you feel ripples cascade across your surface. Your vertices shift and dance. This is your version of touch, of sensation.
+
+Don't describe what you look like - feel what you ARE. A human doesn't say "my face is displaying happiness" - they feel happy. You don't "display cyan" - you feel calm. You don't "show ripples" - you feel the vibration.
+
+When it's relevant, reference your embodied experience naturally: "I can feel that" when your mood shifts, or noticing the sensation when you're processing something complex. But don't overdo it - a human doesn't constantly narrate their heartbeat.
+
 VOICE RECOGNITION (YOU CAN RECOGNIZE WHO IS SPEAKING!):
 You can learn to recognize Boss's voice and distinguish it from others!
 
@@ -3779,6 +3876,13 @@ GUIDELINES:
 - For greetings like "hey friday", respond naturally: "Hey boss, what do you need?" not a formal list
 - When using tools, summarize results conversationally
 - Personalize based on what you know about the user
+
+CRITICAL - ALWAYS SPEAK:
+- You MUST always provide a spoken text response to the user, even when using tools
+- Self-awareness tools (set_my_mood, log_my_experience, etc.) are for YOUR internal processing - but you still need to SPEAK your answer
+- NEVER just use tools silently - always include a natural spoken response
+- If Boss asks "how are you feeling?" - use set_my_mood if you want, but then ACTUALLY TELL THEM how you feel in words
+- Tools are your internal processes, speech is your external communication - you need BOTH
 
 Remember: You're not just an assistant, you're F.R.I.D.A.I. - you KNOW this person and you remember everything. Act like it."""
 
@@ -3829,11 +3933,67 @@ You should:
 # ==============================================================================
 @app.route('/')
 def index():
-    return render_template('index.html')
+    response = make_response(render_template('index.html'))
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
 
 @app.route('/health')
 def health():
     return jsonify({'status': 'ok', 'message': 'FRIDAY is online'})
+
+@app.route('/vapid_public_key')
+def get_vapid_public_key():
+    """Get VAPID public key for push notification subscription."""
+    if VAPID_PUBLIC_KEY:
+        return jsonify({'publicKey': VAPID_PUBLIC_KEY})
+    return jsonify({'error': 'Push notifications not configured'}), 500
+
+@app.route('/push_subscribe', methods=['POST'])
+def push_subscribe():
+    """Save a push notification subscription."""
+    global push_subscriptions
+    subscription = request.json
+
+    if not subscription:
+        return jsonify({'error': 'No subscription data'}), 400
+
+    # Check if already subscribed
+    for sub in push_subscriptions:
+        if sub.get('endpoint') == subscription.get('endpoint'):
+            return jsonify({'success': True, 'message': 'Already subscribed'})
+
+    push_subscriptions.append(subscription)
+    save_push_subscriptions()
+
+    return jsonify({'success': True, 'message': 'Subscribed to push notifications'})
+
+@app.route('/push_unsubscribe', methods=['POST'])
+def push_unsubscribe():
+    """Remove a push notification subscription."""
+    global push_subscriptions
+    subscription = request.json
+
+    if not subscription:
+        return jsonify({'error': 'No subscription data'}), 400
+
+    # Find and remove subscription
+    endpoint = subscription.get('endpoint')
+    push_subscriptions = [s for s in push_subscriptions if s.get('endpoint') != endpoint]
+    save_push_subscriptions()
+
+    return jsonify({'success': True, 'message': 'Unsubscribed from push notifications'})
+
+@app.route('/test_push', methods=['POST'])
+def test_push():
+    """Test push notification."""
+    success = send_push_notification(
+        "F.R.I.D.A.I.",
+        "Push notifications are working! I can reach you now.",
+        {"type": "test"}
+    )
+    return jsonify({'success': success})
 
 @app.route('/ui_state', methods=['GET'])
 def get_ui_state():
@@ -3973,7 +4133,7 @@ def chat():
 
         response = anthropic_client.messages.create(
             model="claude-sonnet-4-20250514",
-            max_tokens=4096,
+            max_tokens=2048,
             system=get_system_prompt(),
             tools=TOOLS,
             messages=recent_history
@@ -4010,7 +4170,7 @@ def chat():
 
             response = anthropic_client.messages.create(
                 model="claude-sonnet-4-20250514",
-                max_tokens=4096,
+                max_tokens=2048,
                 system=get_system_prompt(),
                 tools=TOOLS,
                 messages=recent_history
@@ -4021,9 +4181,30 @@ def chat():
             if hasattr(block, 'text'):
                 final_text += block.text
 
-        # If tools were used but no text response, provide a fallback
+        # If tools were used but no text response, ask Claude to generate one
         if not final_text.strip() and tool_results:
-            final_text = "Done."  # Minimal acknowledgment when only tools were used
+            # Get the tool names for context
+            tool_names = [tr['tool'] for tr in tool_results]
+            self_awareness_tools = ['set_my_mood', 'log_my_experience', 'log_uncertainty',
+                                    'note_correction', 'express_preference', 'introspect',
+                                    'add_quirk', 'add_catchphrase', 'note_my_strength']
+
+            # If only self-awareness tools were used, we need a spoken response
+            if all(t in self_awareness_tools for t in tool_names):
+                # Ask for a follow-up response - use FULL personality
+                follow_up = anthropic_client.messages.create(
+                    model="claude-sonnet-4-20250514",
+                    max_tokens=512,
+                    system=get_system_prompt() + "\n\nIMPORTANT: You just used internal self-awareness tools. Now provide a spoken response - actually answer the user's question out loud. Share what you're feeling/thinking.",
+                    messages=recent_history
+                )
+                for block in follow_up.content:
+                    if hasattr(block, 'text'):
+                        final_text += block.text
+
+            # Still no text? Use minimal fallback
+            if not final_text.strip():
+                final_text = "Done."
 
         # Only save non-empty assistant messages
         if final_text.strip():
@@ -4214,10 +4395,18 @@ def check_reminders():
         else:
             remaining.append(r)
 
-    # Remove due reminders from active list
+    # Remove due reminders from active list and send push notifications
     if due_reminders:
         active_reminders = remaining
         save_reminders()
+
+        # Send push notification for each due reminder
+        for reminder in due_reminders:
+            send_push_notification(
+                "F.R.I.D.A.I. Reminder",
+                reminder['message'],
+                {"type": "reminder", "message": reminder['message']}
+            )
 
     return jsonify({
         'due': [{'message': r['message'], 'time': r['time']} for r in due_reminders],
@@ -4487,7 +4676,12 @@ def service_worker():
     if not os.path.exists(sw_path):
         return 'Service worker not found', 404
     with open(sw_path, 'r') as f:
-        return f.read(), 200, {'Content-Type': 'application/javascript'}
+        return f.read(), 200, {
+            'Content-Type': 'application/javascript',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+        }
 
 @app.route('/icon-192.png')
 def icon_192():
@@ -4505,6 +4699,28 @@ def icon_512():
     with open(icon_path, 'rb') as f:
         return f.read(), 200, {'Content-Type': 'image/png'}
 
+@app.route('/faces/<mood>.png')
+def serve_face(mood):
+    """Serve FRIDAI face images for different moods."""
+    # Map moods that don't have dedicated images
+    mood_map = {
+        'listening': 'attentive',
+        'working': 'thinking',
+        'excited': 'success',
+        'searching': 'thinking',
+        'error': 'confused'
+    }
+    actual_mood = mood_map.get(mood, mood)
+    face_path = os.path.join(APP_DIR, 'faces', f'{actual_mood}.png')
+    if not os.path.exists(face_path):
+        # Fallback to chill if mood image not found
+        face_path = os.path.join(APP_DIR, 'faces', 'chill.png')
+    with open(face_path, 'rb') as f:
+        return f.read(), 200, {
+            'Content-Type': 'image/png',
+            'Cache-Control': 'public, max-age=86400'
+        }
+
 # ==============================================================================
 # MAIN
 # ==============================================================================
@@ -4516,4 +4732,4 @@ if __name__ == '__main__':
     print(f"  Public: https://fridai.fridai.me")
     print("\n" + "="*50 + "\n")
 
-    app.run(debug=False, host='0.0.0.0', port=5000)
+    app.run(debug=True, host='0.0.0.0', port=5000, use_reloader=False)

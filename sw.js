@@ -1,22 +1,21 @@
-const CACHE_NAME = 'fridai-v126';
-const CORE_ASSETS = [
-  '/',
+const CACHE_NAME = 'fridai-v186';
+const CACHE_ASSETS = [
   '/icon-192.png',
   '/icon-512.png',
   '/manifest.json'
 ];
 
-// Install - cache core assets
+// Install - only cache icons and manifest, NOT the main page
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => {
-      return cache.addAll(CORE_ASSETS);
+      return cache.addAll(CACHE_ASSETS);
     })
   );
   self.skipWaiting();
 });
 
-// Activate - clean old caches
+// Activate - clean ALL old caches
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(cacheNames => {
@@ -30,23 +29,85 @@ self.addEventListener('activate', event => {
   self.clients.claim();
 });
 
-// Fetch - network first, cache fallback for core assets
+// Fetch - ALWAYS go to network for HTML, cache only for assets
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
-  
+
+  const url = new URL(event.request.url);
+
+  // Never cache the main page or HTML - always fetch fresh
+  if (url.pathname === '/' || url.pathname.endsWith('.html')) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+
+  // For assets, try network first, fallback to cache
   event.respondWith(
     fetch(event.request)
       .then(response => {
-        // Cache successful responses for core assets
-        if (response.ok && CORE_ASSETS.some(asset => event.request.url.endsWith(asset) || event.request.url.endsWith('/'))) {
+        if (response.ok && CACHE_ASSETS.some(asset => url.pathname.endsWith(asset))) {
           const clone = response.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
         }
         return response;
       })
-      .catch(() => {
-        // Fallback to cache if network fails
-        return caches.match(event.request);
+      .catch(() => caches.match(event.request))
+  );
+});
+
+// Push notification received
+self.addEventListener('push', event => {
+  let data = { title: 'F.R.I.D.A.I.', body: 'You have a notification' };
+
+  if (event.data) {
+    try {
+      data = event.data.json();
+    } catch (e) {
+      data.body = event.data.text();
+    }
+  }
+
+  const options = {
+    body: data.body,
+    icon: '/icon-192.png',
+    badge: '/icon-192.png',
+    vibrate: [200, 100, 200],
+    tag: 'fridai-notification',
+    renotify: true,
+    data: data.data || {},
+    actions: [
+      { action: 'open', title: 'Open FRIDAI' },
+      { action: 'dismiss', title: 'Dismiss' }
+    ]
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(data.title, options)
+  );
+});
+
+// Notification click handler
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+
+  if (event.action === 'dismiss') {
+    return;
+  }
+
+  // Open or focus the FRIDAI app
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true })
+      .then(clientList => {
+        // If already open, focus it
+        for (const client of clientList) {
+          if (client.url.includes(self.location.origin) && 'focus' in client) {
+            return client.focus();
+          }
+        }
+        // Otherwise open new window
+        if (clients.openWindow) {
+          return clients.openWindow('/');
+        }
       })
   );
 });

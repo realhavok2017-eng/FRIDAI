@@ -48,3 +48,12 @@ create_icons.py
 templates/index.html.bak
 .env
 fridai_self.json
+
+# Push notification keys (private)
+vapid_keys.json
+
+# Voice profiles (personal)
+voice_profiles/
+
+# Face images (generated)
+faces/

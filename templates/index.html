@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <meta name="theme-color" content="#00d9ff">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -10,6 +13,8 @@
     <link rel="manifest" href="/manifest.json">
     <link rel="apple-touch-icon" href="/icon-192.png">
     <title>F.R.I.D.A.I.</title>
+    <!-- Three.js for 3D sphere visualization -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -37,6 +42,26 @@
             padding-top: env(safe-area-inset-top);
             padding-bottom: 0;
             overflow: hidden;
+        }
+
+        /* ============================================
+           FRIDAI - 3D SPHERE DISPLAY
+           ============================================ */
+        .fridai-display {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex: 1;
+            min-height: 50vh;
+            cursor: pointer;
+            position: relative;
+        }
+
+        #sphereCanvas {
+            width: 100%;
+            height: 100%;
+            max-width: 400px;
+            max-height: 400px;
         }
 
         header {
@@ -117,10 +142,150 @@
             50% { opacity: 0.5; transform: scale(0.8); }
         }
 
+        /* Chat toggle button */
+        .chat-toggle-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: rgba(0, 20, 40, 0.9);
+            border: 2px solid rgba(0, 217, 255, 0.5);
+            color: #00d9ff;
+            font-size: 20px;
+            cursor: pointer;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 15px rgba(0, 217, 255, 0.3);
+        }
+        .chat-toggle-btn:hover {
+            background: rgba(0, 40, 60, 0.95);
+            border-color: #00d9ff;
+            box-shadow: 0 0 25px rgba(0, 217, 255, 0.5);
+        }
+        .chat-toggle-btn.has-new {
+            animation: pulse-notify 2s infinite;
+        }
+        @keyframes pulse-notify {
+            0%, 100% { box-shadow: 0 0 15px rgba(0, 217, 255, 0.3); }
+            50% { box-shadow: 0 0 25px rgba(0, 255, 136, 0.6); }
+        }
+
+        /* Chat panel - collapsible overlay */
+        .chat-panel {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            width: 350px;
+            max-height: 50vh;
+            background: rgba(0, 10, 20, 0.95);
+            border: 1px solid rgba(0, 217, 255, 0.3);
+            border-radius: 15px;
+            overflow: hidden;
+            z-index: 999;
+            transform: translateY(20px);
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 30px rgba(0, 0, 0, 0.5);
+        }
+        .chat-panel.open {
+            transform: translateY(0);
+            opacity: 1;
+            visibility: visible;
+        }
+        .chat-panel-header {
+            padding: 12px 15px;
+            background: rgba(0, 217, 255, 0.1);
+            border-bottom: 1px solid rgba(0, 217, 255, 0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .chat-panel-header h3 {
+            margin: 0;
+            font-size: 14px;
+            color: #00d9ff;
+        }
+        .chat-panel-close {
+            background: none;
+            border: none;
+            color: #00d9ff;
+            cursor: pointer;
+            font-size: 18px;
+            padding: 0;
+            opacity: 0.7;
+        }
+        .chat-panel-close:hover { opacity: 1; }
+
+        /* ============================================
+           MINIMAL UI - FRIDAI FOCAL POINT MODE
+           Hide clutter, keep essentials
+           ============================================ */
+
+        /* Hide panel tabs and dashboard by default */
+        .panel-tabs,
+        .panel-content,
+        .status-dashboard,
+        .context-indicator,
+        .voice-level-container {
+            display: none !important;
+        }
+
+        /* Smaller, subtler header */
+        header {
+            padding: 10px 15px !important;
+            margin-bottom: 0 !important;
+        }
+        header h1 {
+            font-size: 1.2em !important;
+            opacity: 0.8;
+        }
+
+        /* Avatar status - smaller */
+        .avatar-status {
+            font-size: 0.85em !important;
+            opacity: 0.7;
+            margin-top: 15px !important;
+        }
+
+        /* Controls section - minimal */
+        .controls {
+            padding: 10px 5px !important;
+            margin-top: auto;
+        }
+
+        /* Status text - smaller */
+        .status {
+            font-size: 0.8em !important;
+            opacity: 0.6;
+        }
+
+        /* Hide memory panel toggle by default */
+        .memory-panel-toggle {
+            opacity: 0.4;
+            font-size: 0.75em;
+        }
+        .memory-panel-toggle:hover {
+            opacity: 1;
+        }
+
+        /* Gear button - subtler */
+        .gear-btn {
+            opacity: 0.5;
+        }
+        .gear-btn:hover {
+            opacity: 1;
+        }
+
         .chat-container {
             flex: 1 1 0;
             min-height: 0;
-            max-height: 100%;
+            max-height: 40vh;
             overflow-y: auto;
             overflow-x: hidden;
             padding: 10px 5px;
@@ -991,203 +1156,59 @@
         }
 
         /* ============================================
-           FRIDAY AI AVATAR - HOLOGRAPHIC FACE
+           FRIDAY AI AVATAR - SVG HOLOGRAPHIC FACE
            ============================================ */
 
-        /* Main Avatar Container */
+        /* Main Avatar Container - centered, no box */
         .friday-avatar-container {
-            position: relative;
-            width: 120px;
-            height: 160px;
-            margin: 0 auto 5px;
+            position: static;
+            width: 320px;
+            height: 400px;
             cursor: pointer;
             -webkit-tap-highlight-color: transparent;
+            background: none;
+            border: none;
+            box-shadow: none;
         }
 
-        /* Holographic Glow */
-        .holo-glow {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 160px;
-            height: 200px;
-            transform: translate(-50%, -50%);
-            background: radial-gradient(ellipse, rgba(0, 217, 255, 0.25) 0%, transparent 70%);
-            border-radius: 50%;
-            animation: holo-pulse 4s ease-in-out infinite;
-            pointer-events: none;
-        }
+        /* ============================================
+           FRIDAI FACE IMAGE SYSTEM
+           ============================================ */
 
-        @keyframes holo-pulse {
-            0%, 100% { opacity: 0.6; transform: translate(-50%, -50%) scale(1); }
-            50% { opacity: 0.9; transform: translate(-50%, -50%) scale(1.05); }
-        }
-
-        /* Face Container */
-        .holo-face {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 100px;
-            height: 130px;
-            transform: translate(-50%, -50%);
-            background: linear-gradient(180deg,
-                rgba(0, 40, 60, 0.4) 0%,
-                rgba(0, 60, 80, 0.3) 50%,
-                rgba(0, 40, 60, 0.2) 100%);
-            border: 1px solid rgba(0, 217, 255, 0.4);
-            border-radius: 50px 50px 45px 45px;
-            box-shadow:
-                0 0 20px rgba(0, 217, 255, 0.5),
-                0 0 40px rgba(0, 217, 255, 0.2),
-                inset 0 0 30px rgba(0, 217, 255, 0.1);
-            overflow: hidden;
-            transition: all 0.3s ease;
-        }
-
-        /* Eyebrows */
-        .holo-eyebrow {
-            position: absolute;
-            top: 28px;
-            width: 22px;
-            height: 4px;
-            background: linear-gradient(90deg, transparent, rgba(0, 217, 255, 0.9), transparent);
-            border-radius: 2px;
-            transition: all 0.3s ease;
-        }
-
-        .holo-eyebrow.left {
-            left: 18px;
-            transform: rotate(-5deg);
-        }
-
-        .holo-eyebrow.right {
-            right: 18px;
-            transform: rotate(5deg);
-        }
-
-        /* Eyes */
-        .holo-eye {
-            position: absolute;
-            top: 42px;
-            width: 24px;
-            height: 16px;
-            background: radial-gradient(ellipse,
-                rgba(255, 255, 255, 0.95) 0%,
-                rgba(0, 217, 255, 0.8) 40%,
-                rgba(0, 150, 200, 0.6) 70%,
-                rgba(0, 100, 150, 0.4) 100%);
-            border-radius: 50%;
-            box-shadow:
-                0 0 10px rgba(0, 217, 255, 0.8),
-                0 0 20px rgba(0, 217, 255, 0.4);
-            animation: eye-blink 4s ease-in-out infinite;
-            transition: all 0.3s ease;
-            overflow: hidden;
-        }
-
-        .holo-eye.left {
-            left: 18px;
-        }
-
-        .holo-eye.right {
-            right: 18px;
-        }
-
-        /* Pupils */
-        .holo-pupil {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 8px;
-            height: 10px;
-            background: radial-gradient(ellipse,
-                #001a33 0%,
-                #003366 60%,
-                #004488 100%);
-            border-radius: 50%;
-            transform: translate(-50%, -50%);
-            box-shadow: 0 0 4px rgba(0, 50, 100, 0.8);
-            transition: all 0.2s ease;
-        }
-
-        /* Eye Highlight */
-        .holo-eye-highlight {
-            position: absolute;
-            top: 3px;
-            left: 5px;
-            width: 5px;
-            height: 4px;
-            background: rgba(255, 255, 255, 0.9);
-            border-radius: 50%;
-        }
-
-        /* Blink Animation */
-        @keyframes eye-blink {
-            0%, 45%, 55%, 100% { transform: scaleY(1); }
-            50% { transform: scaleY(0.1); }
-        }
-
-        /* Nose (subtle vertical line) */
-        .holo-nose {
-            position: absolute;
-            top: 65px;
-            left: 50%;
-            width: 2px;
-            height: 20px;
-            background: linear-gradient(180deg,
-                transparent 0%,
-                rgba(0, 217, 255, 0.3) 30%,
-                rgba(0, 217, 255, 0.2) 70%,
-                transparent 100%);
-            transform: translateX(-50%);
-        }
-
-        /* Mouth */
-        .holo-mouth {
-            position: absolute;
-            bottom: 25px;
-            left: 50%;
-            width: 30px;
-            height: 12px;
-            transform: translateX(-50%);
-            transition: all 0.3s ease;
-        }
-
-        .holo-mouth-line {
-            position: absolute;
-            top: 50%;
-            left: 50%;
+        /* Face Image Styling */
+        .fridai-face-img {
             width: 100%;
-            height: 3px;
-            background: linear-gradient(90deg,
-                transparent 0%,
-                rgba(0, 217, 255, 0.7) 20%,
-                rgba(0, 217, 255, 0.9) 50%,
-                rgba(0, 217, 255, 0.7) 80%,
-                transparent 100%);
-            border-radius: 3px;
-            transform: translate(-50%, -50%);
-            transition: all 0.2s ease;
+            height: 100%;
+            object-fit: contain;
+            filter: drop-shadow(0 0 20px rgba(0, 217, 255, 0.5));
+            transition: opacity 0.3s ease, filter 0.3s ease;
+            animation: face-float 4s ease-in-out infinite;
         }
 
-        /* Smile curve */
-        .holo-mouth-line::before {
-            content: '';
+        @keyframes face-float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+
+        /* Holographic overlay glow */
+        .face-glow-overlay {
             position: absolute;
-            bottom: -2px;
-            left: 50%;
-            width: 20px;
-            height: 8px;
-            border: 2px solid transparent;
-            border-bottom-color: rgba(0, 217, 255, 0.5);
-            border-radius: 0 0 20px 20px;
-            transform: translateX(-50%);
-            transition: all 0.3s ease;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(ellipse at center, rgba(0, 217, 255, 0.1) 0%, transparent 70%);
+            pointer-events: none;
+            animation: glow-pulse 3s ease-in-out infinite;
         }
 
-        /* Holographic Scanlines */
-        .holo-scanlines {
+        @keyframes glow-pulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        /* Scanlines overlay */
+        .face-scanlines {
             position: absolute;
             top: 0;
             left: 0;
@@ -1195,37 +1216,519 @@
             height: 100%;
             background: repeating-linear-gradient(
                 0deg,
-                transparent 0px,
+                transparent,
                 transparent 2px,
                 rgba(0, 217, 255, 0.03) 2px,
                 rgba(0, 217, 255, 0.03) 4px
             );
             pointer-events: none;
-            opacity: 0.7;
+            opacity: 0.5;
         }
 
-        /* Holographic Flicker */
-        .holo-flicker {
+        /* ============================================
+           MOOD-BASED FACE CHANGES
+           ============================================ */
+
+        /* Speaking - subtle glow pulse */
+        .friday-avatar-container.speaking .fridai-face-img {
+            animation: face-float 4s ease-in-out infinite, speak-glow 0.15s ease-in-out infinite alternate;
+        }
+        @keyframes speak-glow {
+            0% { filter: drop-shadow(0 0 20px rgba(0, 217, 255, 0.5)); }
+            100% { filter: drop-shadow(0 0 30px rgba(0, 217, 255, 0.8)); }
+        }
+        .friday-avatar-container.speaking .face-glow-overlay {
+            animation: glow-pulse 0.3s ease-in-out infinite;
+        }
+
+        /* Sleeping - dim and slow */
+        .friday-avatar-container.sleeping .fridai-face-img {
+            filter: drop-shadow(0 0 10px rgba(0, 217, 255, 0.2)) brightness(0.6);
+            animation: face-float 6s ease-in-out infinite;
+        }
+        .friday-avatar-container.sleeping .face-glow-overlay {
+            opacity: 0.2;
+        }
+        .friday-avatar-container.sleeping .holo-particle {
+            opacity: 0.2;
+        }
+
+        /* Listening - alert glow */
+        .friday-avatar-container.listening .fridai-face-img {
+            filter: drop-shadow(0 0 25px rgba(0, 217, 255, 0.7));
+        }
+        .friday-avatar-container.listening .face-glow-overlay {
+            background: radial-gradient(ellipse at center, rgba(0, 255, 136, 0.15) 0%, transparent 70%);
+        }
+
+        /* Thinking - contemplative */
+        .friday-avatar-container.thinking .fridai-face-img {
+            animation: face-float 5s ease-in-out infinite;
+        }
+        .friday-avatar-container.thinking .face-glow-overlay {
+            background: radial-gradient(ellipse at center, rgba(153, 102, 255, 0.15) 0%, transparent 70%);
+        }
+
+        /* Working - focused */
+        .friday-avatar-container.working .fridai-face-img {
+            filter: drop-shadow(0 0 20px rgba(255, 170, 51, 0.5));
+        }
+        .friday-avatar-container.working .face-glow-overlay {
+            background: radial-gradient(ellipse at center, rgba(255, 170, 51, 0.15) 0%, transparent 70%);
+        }
+
+        /* Success - bright flash */
+        .friday-avatar-container.success .fridai-face-img {
+            animation: face-float 4s ease-in-out infinite, success-flash 0.5s ease-out;
+        }
+        @keyframes success-flash {
+            0% { filter: drop-shadow(0 0 50px rgba(255, 255, 255, 0.9)) brightness(1.3); }
+            100% { filter: drop-shadow(0 0 25px rgba(0, 255, 136, 0.6)); }
+        }
+
+        /* Excited - energetic */
+        .friday-avatar-container.excited .fridai-face-img {
+            animation: face-bounce 0.5s ease-in-out infinite;
+        }
+        @keyframes face-bounce {
+            0%, 100% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(-8px) scale(1.02); }
+        }
+
+        /* Confused - slight tilt */
+        .friday-avatar-container.confused .fridai-face-img {
+            animation: face-tilt 0.8s ease-in-out infinite alternate;
+        }
+        @keyframes face-tilt {
+            0% { transform: rotate(-2deg); }
+            100% { transform: rotate(2deg); }
+        }
+
+        /* Upset - subdued */
+        .friday-avatar-container.upset .fridai-face-img {
+            filter: drop-shadow(0 0 15px rgba(100, 150, 200, 0.4)) saturate(0.8);
+        }
+
+        /* Annoyed - intense */
+        .friday-avatar-container.annoyed .fridai-face-img {
+            filter: drop-shadow(0 0 20px rgba(255, 100, 100, 0.4));
+        }
+        .friday-avatar-container.annoyed .face-glow-overlay {
+            background: radial-gradient(ellipse at center, rgba(255, 100, 100, 0.1) 0%, transparent 70%);
+        }
+
+        /* Floating Particles */
+        .holo-particles {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: transparent;
             pointer-events: none;
-            animation: holo-flicker-anim 8s linear infinite;
         }
 
-        @keyframes holo-flicker-anim {
-            0%, 100% { opacity: 0; }
-            5% { opacity: 0.02; background: rgba(0, 217, 255, 0.1); }
-            5.5% { opacity: 0; }
-            45% { opacity: 0; }
-            45.5% { opacity: 0.03; background: rgba(255, 255, 255, 0.05); }
-            46% { opacity: 0; }
+        .holo-particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: rgba(0, 217, 255, 0.9);
+            border-radius: 50%;
+            box-shadow: 0 0 8px rgba(0, 217, 255, 0.8);
+            animation: particle-drift 6s ease-in-out infinite;
+        }
+
+        .holo-particle:nth-child(1) { top: 10%; left: 5%; animation-delay: 0s; }
+        .holo-particle:nth-child(2) { top: 15%; right: 5%; animation-delay: 1s; }
+        .holo-particle:nth-child(3) { top: 50%; left: 0%; animation-delay: 2s; }
+        .holo-particle:nth-child(4) { top: 55%; right: 0%; animation-delay: 3s; }
+        .holo-particle:nth-child(5) { top: 85%; left: 15%; animation-delay: 4s; }
+        .holo-particle:nth-child(6) { top: 80%; right: 15%; animation-delay: 5s; }
+
+        @keyframes particle-drift {
+            0%, 100% { opacity: 0; transform: translateY(0) scale(0.5); }
+            20% { opacity: 1; transform: translateY(-15px) scale(1); }
+            80% { opacity: 1; transform: translateY(-40px) scale(1); }
+            100% { opacity: 0; transform: translateY(-50px) scale(0.5); }
+        }
+
+        /* Face depth shadow */
+        .face-depth {
+            position: absolute;
+            top: 5%;
+            left: 5%;
+            width: 90%;
+            height: 90%;
+            background: radial-gradient(ellipse 70% 50% at 50% 30%,
+                transparent 0%,
+                rgba(0, 40, 60, 0.2) 100%);
+            border-radius: inherit;
+            pointer-events: none;
+        }
+
+        /* Face highlight - top light */
+        .face-highlight {
+            position: absolute;
+            top: 5px;
+            left: 15%;
+            width: 70%;
+            height: 25px;
+            background: linear-gradient(180deg,
+                rgba(0, 217, 255, 0.15) 0%,
+                transparent 100%);
+            border-radius: 40px 40px 0 0;
+            pointer-events: none;
+        }
+
+        /* Eyebrows - Elegant arched */
+        .holo-eyebrow {
+            position: absolute;
+            top: 38px;
+            width: 32px;
+            height: 4px;
+            background: linear-gradient(90deg,
+                transparent 0%,
+                rgba(0, 217, 255, 0.8) 15%,
+                rgba(0, 255, 255, 1) 50%,
+                rgba(0, 217, 255, 0.8) 85%,
+                transparent 100%);
+            border-radius: 3px;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 8px rgba(0, 217, 255, 0.6), 0 0 15px rgba(0, 217, 255, 0.3);
+        }
+
+        .holo-eyebrow.left {
+            left: 14px;
+            transform: rotate(-8deg);
+            border-radius: 4px 2px 2px 4px;
+        }
+
+        .holo-eyebrow.right {
+            right: 14px;
+            transform: rotate(8deg);
+            border-radius: 2px 4px 4px 2px;
+        }
+
+        /* Eyes - Almond shaped with full depth */
+        .holo-eye {
+            position: absolute;
+            top: 52px;
+            width: 36px;
+            height: 22px;
+            border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            animation: eye-blink 4s ease-in-out infinite;
+            box-shadow: 0 0 15px rgba(0, 217, 255, 0.4);
+        }
+
+        .holo-eye.left { left: 12px; }
+        .holo-eye.right { right: 12px; }
+
+        /* Eye socket shadow */
+        .eye-socket {
+            position: absolute;
+            top: -3px;
+            left: -3px;
+            width: calc(100% + 6px);
+            height: calc(100% + 6px);
+            background: radial-gradient(ellipse,
+                rgba(0, 30, 50, 0.4) 0%,
+                rgba(0, 50, 70, 0.2) 50%,
+                transparent 70%);
+            border-radius: inherit;
+        }
+
+        /* Eye white (sclera) */
+        .eye-white {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(ellipse at 40% 40%,
+                rgba(220, 240, 255, 0.95) 0%,
+                rgba(180, 220, 240, 0.9) 30%,
+                rgba(140, 200, 230, 0.85) 60%,
+                rgba(100, 180, 220, 0.8) 100%);
+            border-radius: inherit;
+            box-shadow:
+                inset 0 2px 4px rgba(0, 50, 80, 0.3),
+                0 0 10px rgba(0, 217, 255, 0.5);
+        }
+
+        /* Iris */
+        .holo-iris {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 16px;
+            height: 16px;
+            transform: translate(-50%, -50%);
+            background: radial-gradient(circle,
+                rgba(0, 220, 255, 1) 0%,
+                rgba(0, 180, 230, 1) 30%,
+                rgba(0, 140, 200, 1) 60%,
+                rgba(0, 100, 160, 1) 100%);
+            border-radius: 50%;
+            box-shadow:
+                inset 0 0 4px rgba(0, 0, 0, 0.4),
+                0 0 12px rgba(0, 217, 255, 0.7),
+                0 0 20px rgba(0, 217, 255, 0.3);
+            transition: all 0.2s ease;
+        }
+
+        /* Pupil */
+        .holo-pupil {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 6px;
+            height: 7px;
+            transform: translate(-50%, -50%);
+            background: radial-gradient(ellipse,
+                #000d1a 0%,
+                #001a33 60%,
+                #002244 100%);
+            border-radius: 50%;
+            box-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
+            transition: all 0.2s ease;
+        }
+
+        /* Eye reflection */
+        .eye-reflection {
+            position: absolute;
+            top: 3px;
+            left: 6px;
+            width: 6px;
+            height: 5px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 50%;
+            box-shadow: 0 0 4px rgba(255, 255, 255, 0.5);
+        }
+
+        /* Eye shine - secondary reflection */
+        .eye-shine {
+            position: absolute;
+            bottom: 4px;
+            right: 5px;
+            width: 3px;
+            height: 2px;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+        }
+
+        /* Blink Animation */
+        @keyframes eye-blink {
+            0%, 45%, 55%, 100% { transform: scaleY(1); }
+            50% { transform: scaleY(0.08); }
+        }
+
+        /* Nose - 3D subtle */
+        .holo-nose {
+            position: absolute;
+            top: 70px;
+            left: 50%;
+            width: 12px;
+            height: 30px;
+            transform: translateX(-50%);
+        }
+
+        .nose-bridge {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            width: 3px;
+            height: 20px;
+            background: linear-gradient(180deg,
+                transparent 0%,
+                rgba(0, 217, 255, 0.15) 30%,
+                rgba(0, 217, 255, 0.25) 70%,
+                rgba(0, 217, 255, 0.15) 100%);
+            transform: translateX(-50%);
+        }
+
+        .nose-tip {
+            position: absolute;
+            bottom: 2px;
+            left: 50%;
+            width: 10px;
+            height: 6px;
+            background: radial-gradient(ellipse,
+                rgba(0, 217, 255, 0.2) 0%,
+                transparent 70%);
+            transform: translateX(-50%);
+            border-radius: 50%;
+        }
+
+        /* Cheekbone highlights */
+        .cheekbone {
+            position: absolute;
+            top: 65px;
+            width: 20px;
+            height: 15px;
+            background: radial-gradient(ellipse,
+                rgba(0, 217, 255, 0.12) 0%,
+                transparent 70%);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .cheekbone.left { left: 8px; }
+        .cheekbone.right { right: 8px; }
+
+        /* Mouth - Fuller, more defined */
+        .holo-mouth {
+            position: absolute;
+            bottom: 28px;
+            left: 50%;
+            width: 35px;
+            height: 16px;
+            transform: translateX(-50%);
+            transition: all 0.3s ease;
+        }
+
+        /* Upper lip */
+        .lip-upper {
+            position: absolute;
+            top: 2px;
+            left: 50%;
+            width: 32px;
+            height: 8px;
+            transform: translateX(-50%);
+            background: linear-gradient(180deg,
+                rgba(180, 100, 140, 0.7) 0%,
+                rgba(200, 120, 160, 0.8) 50%,
+                rgba(180, 100, 140, 0.7) 100%);
+            border-radius: 10px 10px 50% 50% / 50% 50% 100% 100%;
+            box-shadow:
+                0 1px 3px rgba(0, 0, 0, 0.2),
+                inset 0 -1px 2px rgba(255, 200, 220, 0.4),
+                0 0 8px rgba(0, 217, 255, 0.3);
+            transition: all 0.2s ease;
+        }
+
+        /* Cupid's bow */
+        .lip-upper::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            width: 6px;
+            height: 3px;
+            background: rgba(0, 50, 80, 0.2);
+            transform: translateX(-50%);
+            border-radius: 0 0 50% 50%;
+        }
+
+        /* Lower lip */
+        .lip-lower {
+            position: absolute;
+            bottom: 1px;
+            left: 50%;
+            width: 28px;
+            height: 10px;
+            transform: translateX(-50%);
+            background: linear-gradient(180deg,
+                rgba(200, 120, 160, 0.8) 0%,
+                rgba(220, 140, 180, 0.85) 40%,
+                rgba(200, 120, 160, 0.75) 100%);
+            border-radius: 50% 50% 40% 40% / 100% 100% 60% 60%;
+            box-shadow:
+                0 2px 5px rgba(0, 0, 0, 0.2),
+                inset 0 2px 3px rgba(255, 220, 240, 0.3),
+                0 0 10px rgba(0, 217, 255, 0.3);
+            transition: all 0.2s ease;
+        }
+
+        /* Lip highlight */
+        .lip-lower::before {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 50%;
+            width: 12px;
+            height: 3px;
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateX(-50%);
+            border-radius: 50%;
+        }
+
+        /* Mouth shadow */
+        .mouth-shadow {
+            position: absolute;
+            top: 8px;
+            left: 50%;
+            width: 20px;
+            height: 2px;
+            transform: translateX(-50%);
+            background: rgba(0, 40, 60, 0.2);
+            border-radius: 50%;
+        }
+
+        /* Chin highlight */
+        .chin-highlight {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            width: 25px;
+            height: 12px;
+            transform: translateX(-50%);
+            background: radial-gradient(ellipse,
+                rgba(0, 217, 255, 0.08) 0%,
+                transparent 70%);
+            border-radius: 50%;
+        }
+
+        /* Holographic Scanlines */
+        .holo-scanlines {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 110px;
+            height: 145px;
+            transform: translate(-50%, -50%);
+            background: repeating-linear-gradient(
+                0deg,
+                transparent 0px,
+                transparent 3px,
+                rgba(0, 217, 255, 0.02) 3px,
+                rgba(0, 217, 255, 0.02) 4px
+            );
+            border-radius: 55px 55px 50px 50px;
+            pointer-events: none;
+            opacity: 0.6;
+            animation: scanline-move 8s linear infinite;
+        }
+
+        @keyframes scanline-move {
+            0% { background-position: 0 0; }
+            100% { background-position: 0 100px; }
+        }
+
+        /* Holographic Glitch Effect */
+        .holo-glitch {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 110px;
+            height: 145px;
+            transform: translate(-50%, -50%);
+            border-radius: 55px 55px 50px 50px;
+            pointer-events: none;
+            opacity: 0;
+            animation: glitch-effect 10s linear infinite;
+        }
+
+        @keyframes glitch-effect {
+            0%, 100% { opacity: 0; transform: translate(-50%, -50%); }
+            5% { opacity: 0.3; transform: translate(-48%, -50%); background: rgba(0, 255, 255, 0.1); }
+            5.5% { opacity: 0; transform: translate(-50%, -50%); }
+            42% { opacity: 0; }
+            42.5% { opacity: 0.2; transform: translate(-52%, -50%); background: rgba(255, 0, 255, 0.05); }
+            43% { opacity: 0; transform: translate(-50%, -50%); }
             78% { opacity: 0; }
-            78.2% { opacity: 0.02; background: rgba(0, 217, 255, 0.08); }
-            78.5% { opacity: 0; }
+            78.3% { opacity: 0.15; transform: translate(-50%, -48%); background: rgba(0, 217, 255, 0.1); }
+            78.6% { opacity: 0; transform: translate(-50%, -50%); }
         }
 
         /* ============================================
@@ -1234,134 +1737,128 @@
 
         /* LISTENING - Wide eyes, alert, green tint */
         .friday-avatar-container.listening .holo-face {
-            border-color: rgba(0, 255, 136, 0.6);
-            box-shadow: 0 0 25px rgba(0, 255, 136, 0.6), 0 0 50px rgba(0, 255, 136, 0.3);
+            border-color: rgba(0, 255, 136, 0.5);
+            box-shadow: 0 0 35px rgba(0, 255, 136, 0.5), 0 0 70px rgba(0, 255, 136, 0.2);
         }
-        .friday-avatar-container.listening .holo-glow {
-            background: radial-gradient(ellipse, rgba(0, 255, 136, 0.3) 0%, transparent 70%);
+        .friday-avatar-container.listening .holo-aura {
+            background: radial-gradient(ellipse, rgba(0, 255, 136, 0.2) 0%, transparent 70%);
+        }
+        .friday-avatar-container.listening .holo-particle {
+            background: rgba(0, 255, 136, 0.8);
+            box-shadow: 0 0 8px rgba(0, 255, 136, 0.6);
         }
         .friday-avatar-container.listening .holo-eye {
-            transform: scaleY(1.15) scaleX(1.1);
-            background: radial-gradient(ellipse, rgba(255,255,255,0.95) 0%, rgba(0,255,136,0.8) 40%, rgba(0,200,100,0.6) 100%);
-            box-shadow: 0 0 15px rgba(0, 255, 136, 0.9);
+            transform: scaleY(1.1);
             animation: eye-blink-fast 3s ease-in-out infinite;
         }
-        .friday-avatar-container.listening .holo-eyebrow {
-            transform: translateY(-3px);
-            background: linear-gradient(90deg, transparent, rgba(0, 255, 136, 0.9), transparent);
+        .friday-avatar-container.listening .holo-iris {
+            background: radial-gradient(circle, rgba(0, 220, 136, 0.9) 0%, rgba(0, 180, 100, 1) 70%, rgba(0, 140, 80, 1) 100%);
+            box-shadow: 0 0 10px rgba(0, 255, 136, 0.6);
         }
-        .friday-avatar-container.listening .holo-eyebrow.left { transform: translateY(-3px) rotate(-8deg); }
-        .friday-avatar-container.listening .holo-eyebrow.right { transform: translateY(-3px) rotate(8deg); }
-        .friday-avatar-container.listening .holo-mouth-line {
+        .friday-avatar-container.listening .holo-eyebrow {
+            transform: translateY(-3px) rotate(-10deg);
             background: linear-gradient(90deg, transparent, rgba(0, 255, 136, 0.8), transparent);
         }
+        .friday-avatar-container.listening .holo-eyebrow.right { transform: translateY(-3px) rotate(10deg); }
+        .friday-avatar-container.listening .lip-upper,
+        .friday-avatar-container.listening .lip-lower {
+            background: linear-gradient(180deg, rgba(0, 200, 136, 0.5) 0%, rgba(0, 255, 136, 0.6) 100%);
+        }
         @keyframes eye-blink-fast {
-            0%, 40%, 60%, 100% { transform: scaleY(1.15) scaleX(1.1); }
-            50% { transform: scaleY(0.1) scaleX(1.1); }
+            0%, 40%, 60%, 100% { transform: scaleY(1.1); }
+            50% { transform: scaleY(0.08); }
         }
 
-        /* THINKING - Eyes look up, one eyebrow raised, purple tint */
+        /* THINKING - Eyes look up, one eyebrow raised, purple */
         .friday-avatar-container.thinking .holo-face {
-            border-color: rgba(153, 102, 255, 0.6);
-            box-shadow: 0 0 25px rgba(153, 102, 255, 0.5), 0 0 50px rgba(102, 126, 234, 0.3);
+            border-color: rgba(153, 102, 255, 0.5);
+            box-shadow: 0 0 35px rgba(153, 102, 255, 0.4), 0 0 70px rgba(102, 126, 234, 0.2);
         }
-        .friday-avatar-container.thinking .holo-glow {
-            background: radial-gradient(ellipse, rgba(153, 102, 255, 0.3) 0%, transparent 70%);
-            animation: holo-pulse 2s ease-in-out infinite;
+        .friday-avatar-container.thinking .holo-aura {
+            background: radial-gradient(ellipse, rgba(153, 102, 255, 0.2) 0%, transparent 70%);
+            animation: aura-breathe 2s ease-in-out infinite;
         }
-        .friday-avatar-container.thinking .holo-eye {
-            background: radial-gradient(ellipse, rgba(255,255,255,0.95) 0%, rgba(153,102,255,0.8) 40%, rgba(102,126,234,0.6) 100%);
-            box-shadow: 0 0 12px rgba(153, 102, 255, 0.8);
-            animation: none;
+        .friday-avatar-container.thinking .holo-particle {
+            background: rgba(153, 102, 255, 0.8);
+            box-shadow: 0 0 8px rgba(153, 102, 255, 0.6);
         }
-        .friday-avatar-container.thinking .holo-pupil {
-            animation: pupil-think 2s ease-in-out infinite;
+        .friday-avatar-container.thinking .holo-eye { animation: none; }
+        .friday-avatar-container.thinking .holo-iris {
+            background: radial-gradient(circle, rgba(153, 102, 255, 0.9) 0%, rgba(120, 80, 220, 1) 70%, rgba(80, 50, 180, 1) 100%);
+            animation: iris-think 2s ease-in-out infinite;
         }
-        @keyframes pupil-think {
+        @keyframes iris-think {
             0%, 100% { transform: translate(-50%, -50%); }
-            25% { transform: translate(-30%, -70%); }
-            50% { transform: translate(-70%, -60%); }
+            25% { transform: translate(-40%, -65%); }
+            50% { transform: translate(-60%, -60%); }
             75% { transform: translate(-50%, -50%); }
         }
         .friday-avatar-container.thinking .holo-eyebrow.left {
-            transform: rotate(-12deg) translateY(-4px);
-            background: linear-gradient(90deg, transparent, rgba(153, 102, 255, 0.9), transparent);
+            transform: rotate(-15deg) translateY(-5px);
+            background: linear-gradient(90deg, transparent, rgba(153, 102, 255, 0.8), transparent);
         }
         .friday-avatar-container.thinking .holo-eyebrow.right {
-            transform: rotate(2deg);
-            background: linear-gradient(90deg, transparent, rgba(153, 102, 255, 0.9), transparent);
+            transform: rotate(5deg);
+            background: linear-gradient(90deg, transparent, rgba(153, 102, 255, 0.8), transparent);
         }
-        .friday-avatar-container.thinking .holo-mouth-line {
-            width: 70%;
-            background: linear-gradient(90deg, transparent, rgba(153, 102, 255, 0.7), transparent);
-        }
+        .friday-avatar-container.thinking .lip-upper { width: 24px; }
 
-        /* SPEAKING - Mouth animates, warm red/coral */
+        /* SPEAKING - Mouth animates, warm coral */
         .friday-avatar-container.speaking .holo-face {
-            border-color: rgba(255, 107, 107, 0.6);
-            box-shadow: 0 0 25px rgba(255, 107, 107, 0.5), 0 0 50px rgba(255, 71, 87, 0.3);
+            border-color: rgba(255, 130, 130, 0.5);
+            box-shadow: 0 0 35px rgba(255, 130, 130, 0.4), 0 0 70px rgba(255, 100, 100, 0.2);
         }
-        .friday-avatar-container.speaking .holo-glow {
-            background: radial-gradient(ellipse, rgba(255, 107, 107, 0.3) 0%, transparent 70%);
-            animation: speak-glow-face 0.3s ease-in-out infinite alternate;
+        .friday-avatar-container.speaking .holo-aura {
+            background: radial-gradient(ellipse, rgba(255, 130, 130, 0.2) 0%, transparent 70%);
+            animation: speak-aura 0.3s ease-in-out infinite alternate;
         }
-        @keyframes speak-glow-face {
-            0% { opacity: 0.6; transform: translate(-50%, -50%) scale(1); }
-            100% { opacity: 0.9; transform: translate(-50%, -50%) scale(1.08); }
+        @keyframes speak-aura {
+            0% { opacity: 0.7; transform: translate(-50%, -50%) scale(1); }
+            100% { opacity: 1; transform: translate(-50%, -50%) scale(1.05); }
         }
-        .friday-avatar-container.speaking .holo-eye {
-            background: radial-gradient(ellipse, rgba(255,255,255,0.95) 0%, rgba(255,150,150,0.7) 40%, rgba(255,100,100,0.5) 100%);
-            box-shadow: 0 0 12px rgba(255, 107, 107, 0.8);
-            animation: none;
+        .friday-avatar-container.speaking .holo-particle {
+            background: rgba(255, 130, 130, 0.8);
+            box-shadow: 0 0 8px rgba(255, 130, 130, 0.6);
+        }
+        .friday-avatar-container.speaking .holo-eye { animation: none; }
+        .friday-avatar-container.speaking .holo-iris {
+            background: radial-gradient(circle, rgba(255, 150, 150, 0.9) 0%, rgba(255, 100, 100, 1) 70%, rgba(200, 80, 80, 1) 100%);
         }
         .friday-avatar-container.speaking .holo-eyebrow {
-            background: linear-gradient(90deg, transparent, rgba(255, 107, 107, 0.9), transparent);
+            background: linear-gradient(90deg, transparent, rgba(255, 130, 130, 0.8), transparent);
         }
         .friday-avatar-container.speaking .holo-mouth {
-            animation: mouth-speak 0.15s ease-in-out infinite alternate;
+            animation: mouth-speak 0.12s ease-in-out infinite alternate;
         }
         @keyframes mouth-speak {
             0% { transform: translateX(-50%) scaleY(1); }
-            100% { transform: translateX(-50%) scaleY(1.8); }
+            100% { transform: translateX(-50%) scaleY(1.5); }
         }
-        .friday-avatar-container.speaking .holo-mouth-line {
-            height: 5px;
-            background: linear-gradient(90deg, transparent, rgba(255, 107, 107, 0.9), transparent);
-        }
-        .friday-avatar-container.speaking .holo-mouth-line::before {
-            border-bottom-color: rgba(255, 107, 107, 0.6);
+        .friday-avatar-container.speaking .lip-upper,
+        .friday-avatar-container.speaking .lip-lower {
+            background: linear-gradient(180deg, rgba(255, 130, 130, 0.5) 0%, rgba(255, 100, 100, 0.6) 100%);
         }
 
-        /* SLEEPING - Eyes closed, dim, peaceful */
+        /* SLEEPING - Eyes closed, dim */
         .friday-avatar-container.sleeping .holo-face {
-            border-color: rgba(100, 100, 120, 0.3);
-            box-shadow: 0 0 10px rgba(100, 100, 120, 0.2);
-            filter: brightness(0.6);
+            border-color: rgba(80, 80, 100, 0.3);
+            box-shadow: 0 0 15px rgba(80, 80, 100, 0.2);
+            filter: brightness(0.6) saturate(0.7);
         }
-        .friday-avatar-container.sleeping .holo-glow {
-            background: radial-gradient(ellipse, rgba(80, 80, 100, 0.15) 0%, transparent 70%);
-            opacity: 0.4;
-        }
+        .friday-avatar-container.sleeping .holo-aura { opacity: 0.3; }
+        .friday-avatar-container.sleeping .holo-particle { opacity: 0.2; }
         .friday-avatar-container.sleeping .holo-eye {
-            transform: scaleY(0.1);
-            background: rgba(100, 100, 120, 0.3);
-            box-shadow: 0 0 5px rgba(100, 100, 120, 0.3);
+            transform: scaleY(0.08);
             animation: none;
         }
         .friday-avatar-container.sleeping .holo-eyebrow {
-            transform: translateY(2px) rotate(0deg);
+            transform: translateY(3px) rotate(0deg);
             opacity: 0.4;
-            background: linear-gradient(90deg, transparent, rgba(100, 100, 120, 0.5), transparent);
         }
-        .friday-avatar-container.sleeping .holo-mouth-line {
-            opacity: 0.4;
-            background: linear-gradient(90deg, transparent, rgba(100, 100, 120, 0.5), transparent);
-        }
-        .friday-avatar-container.sleeping .holo-mouth-line::before {
-            opacity: 0;
-        }
+        .friday-avatar-container.sleeping .lip-upper,
+        .friday-avatar-container.sleeping .lip-lower { opacity: 0.5; }
 
-        /* CHILL - Relaxed, default cyan, slight smile */
+        /* CHILL - Default relaxed state */
         .friday-avatar-container.chill .holo-eye {
             animation: eye-blink 5s ease-in-out infinite;
         }
@@ -1369,190 +1866,174 @@
             animation: face-breathe 4s ease-in-out infinite;
         }
         @keyframes face-breathe {
-            0%, 100% { box-shadow: 0 0 20px rgba(0, 217, 255, 0.5), 0 0 40px rgba(0, 217, 255, 0.2); }
-            50% { box-shadow: 0 0 25px rgba(0, 217, 255, 0.6), 0 0 50px rgba(0, 217, 255, 0.3); }
+            0%, 100% { box-shadow: 0 0 30px rgba(0, 217, 255, 0.4), 0 0 60px rgba(0, 217, 255, 0.15); }
+            50% { box-shadow: 0 0 40px rgba(0, 217, 255, 0.5), 0 0 80px rgba(0, 217, 255, 0.2); }
         }
 
-        /* WORKING - Focused, intense orange, determined */
+        /* WORKING - Focused, orange */
         .friday-avatar-container.working .holo-face {
-            border-color: rgba(255, 170, 51, 0.6);
-            box-shadow: 0 0 25px rgba(255, 170, 51, 0.6), 0 0 50px rgba(255, 140, 0, 0.3);
+            border-color: rgba(255, 170, 51, 0.5);
+            box-shadow: 0 0 35px rgba(255, 170, 51, 0.5), 0 0 70px rgba(255, 140, 0, 0.2);
         }
-        .friday-avatar-container.working .holo-glow {
-            background: radial-gradient(ellipse, rgba(255, 170, 51, 0.3) 0%, transparent 70%);
-            animation: holo-pulse 1.5s ease-in-out infinite;
+        .friday-avatar-container.working .holo-aura {
+            background: radial-gradient(ellipse, rgba(255, 170, 51, 0.2) 0%, transparent 70%);
+            animation: aura-breathe 1.5s ease-in-out infinite;
+        }
+        .friday-avatar-container.working .holo-particle {
+            background: rgba(255, 170, 51, 0.8);
+            box-shadow: 0 0 8px rgba(255, 170, 51, 0.6);
         }
         .friday-avatar-container.working .holo-eye {
-            transform: scaleY(0.85);
-            background: radial-gradient(ellipse, rgba(255,255,255,0.95) 0%, rgba(255,170,51,0.8) 40%, rgba(255,140,0,0.6) 100%);
-            box-shadow: 0 0 12px rgba(255, 170, 51, 0.9);
+            transform: scaleY(0.9);
             animation: none;
         }
-        .friday-avatar-container.working .holo-eyebrow {
-            transform: translateY(2px) rotate(0deg);
-            background: linear-gradient(90deg, transparent, rgba(255, 170, 51, 0.9), transparent);
+        .friday-avatar-container.working .holo-iris {
+            background: radial-gradient(circle, rgba(255, 180, 80, 0.9) 0%, rgba(255, 140, 0, 1) 70%, rgba(200, 100, 0, 1) 100%);
         }
-        .friday-avatar-container.working .holo-eyebrow.left { transform: translateY(2px) rotate(-8deg); }
-        .friday-avatar-container.working .holo-eyebrow.right { transform: translateY(2px) rotate(8deg); }
-        .friday-avatar-container.working .holo-mouth-line {
-            width: 80%;
+        .friday-avatar-container.working .holo-eyebrow.left { transform: rotate(-10deg) translateY(2px); }
+        .friday-avatar-container.working .holo-eyebrow.right { transform: rotate(10deg) translateY(2px); }
+        .friday-avatar-container.working .holo-eyebrow {
             background: linear-gradient(90deg, transparent, rgba(255, 170, 51, 0.8), transparent);
         }
 
-        /* SEARCHING - Eyes sweep left/right, cyan-blue */
+        /* SEARCHING - Eyes sweep */
         .friday-avatar-container.searching .holo-face {
-            border-color: rgba(0, 221, 255, 0.6);
-            box-shadow: 0 0 25px rgba(0, 221, 255, 0.6), 0 0 50px rgba(0, 180, 255, 0.3);
+            border-color: rgba(0, 200, 255, 0.5);
+            box-shadow: 0 0 35px rgba(0, 200, 255, 0.5), 0 0 70px rgba(0, 180, 255, 0.2);
         }
-        .friday-avatar-container.searching .holo-glow {
-            background: radial-gradient(ellipse, rgba(0, 221, 255, 0.35) 0%, transparent 70%);
-            animation: holo-pulse 1s ease-in-out infinite;
+        .friday-avatar-container.searching .holo-aura {
+            background: radial-gradient(ellipse, rgba(0, 200, 255, 0.25) 0%, transparent 70%);
+            animation: aura-breathe 1s ease-in-out infinite;
         }
-        .friday-avatar-container.searching .holo-eye {
-            background: radial-gradient(ellipse, rgba(255,255,255,0.95) 0%, rgba(0,221,255,0.8) 40%, rgba(0,180,255,0.6) 100%);
-            box-shadow: 0 0 15px rgba(0, 221, 255, 0.9);
-            animation: none;
+        .friday-avatar-container.searching .holo-particle {
+            background: rgba(0, 220, 255, 0.9);
+            box-shadow: 0 0 10px rgba(0, 220, 255, 0.7);
         }
-        .friday-avatar-container.searching .holo-pupil {
-            animation: pupil-search 1.5s ease-in-out infinite;
+        .friday-avatar-container.searching .holo-eye { animation: none; }
+        .friday-avatar-container.searching .holo-iris {
+            background: radial-gradient(circle, rgba(0, 220, 255, 0.9) 0%, rgba(0, 180, 220, 1) 70%, rgba(0, 140, 180, 1) 100%);
+            animation: iris-search 1.5s ease-in-out infinite;
         }
-        @keyframes pupil-search {
+        @keyframes iris-search {
             0%, 100% { transform: translate(-50%, -50%); }
-            25% { transform: translate(-20%, -50%); }
-            75% { transform: translate(-80%, -50%); }
-        }
-        .friday-avatar-container.searching .holo-eyebrow {
-            background: linear-gradient(90deg, transparent, rgba(0, 221, 255, 0.9), transparent);
+            25% { transform: translate(-30%, -50%); }
+            75% { transform: translate(-70%, -50%); }
         }
 
-        /* SUCCESS - Big smile, happy eyes, gold */
+        /* SUCCESS - Happy, gold */
         .friday-avatar-container.success .holo-face {
-            border-color: rgba(255, 204, 0, 0.7);
-            box-shadow: 0 0 30px rgba(255, 204, 0, 0.7), 0 0 60px rgba(255, 180, 0, 0.4);
+            border-color: rgba(255, 204, 0, 0.6);
+            box-shadow: 0 0 40px rgba(255, 204, 0, 0.6), 0 0 80px rgba(255, 180, 0, 0.3);
             animation: success-flash 0.5s ease-out;
         }
         @keyframes success-flash {
-            0% { filter: brightness(1.5); }
+            0% { filter: brightness(1.4); }
             100% { filter: brightness(1); }
         }
-        .friday-avatar-container.success .holo-glow {
-            background: radial-gradient(ellipse, rgba(255, 204, 0, 0.4) 0%, transparent 70%);
+        .friday-avatar-container.success .holo-aura {
+            background: radial-gradient(ellipse, rgba(255, 204, 0, 0.3) 0%, transparent 70%);
+        }
+        .friday-avatar-container.success .holo-particle {
+            background: rgba(255, 220, 50, 0.9);
+            box-shadow: 0 0 10px rgba(255, 220, 50, 0.7);
         }
         .friday-avatar-container.success .holo-eye {
-            transform: scaleY(0.6) scaleX(1.1);
-            background: radial-gradient(ellipse, rgba(255,255,255,0.95) 0%, rgba(255,204,0,0.8) 40%, rgba(255,180,0,0.6) 100%);
-            box-shadow: 0 0 15px rgba(255, 204, 0, 0.9);
-            border-radius: 50% 50% 50% 50% / 20% 20% 80% 80%;
+            transform: scaleY(0.5);
+            border-radius: 50% 50% 50% 50% / 30% 30% 70% 70%;
             animation: none;
+        }
+        .friday-avatar-container.success .holo-iris {
+            background: radial-gradient(circle, rgba(255, 220, 100, 0.9) 0%, rgba(255, 180, 0, 1) 70%, rgba(220, 150, 0, 1) 100%);
         }
         .friday-avatar-container.success .holo-eyebrow {
             transform: translateY(-5px);
-            background: linear-gradient(90deg, transparent, rgba(255, 204, 0, 0.9), transparent);
+            background: linear-gradient(90deg, transparent, rgba(255, 204, 0, 0.8), transparent);
         }
-        .friday-avatar-container.success .holo-eyebrow.left { transform: translateY(-5px) rotate(-10deg); }
-        .friday-avatar-container.success .holo-eyebrow.right { transform: translateY(-5px) rotate(10deg); }
-        .friday-avatar-container.success .holo-mouth {
-            width: 40px;
-        }
-        .friday-avatar-container.success .holo-mouth-line {
-            height: 4px;
-            background: linear-gradient(90deg, transparent, rgba(255, 204, 0, 0.9), transparent);
-        }
-        .friday-avatar-container.success .holo-mouth-line::before {
-            width: 30px;
-            height: 12px;
-            border-bottom-color: rgba(255, 204, 0, 0.8);
+        .friday-avatar-container.success .holo-eyebrow.left { transform: translateY(-5px) rotate(-12deg); }
+        .friday-avatar-container.success .holo-eyebrow.right { transform: translateY(-5px) rotate(12deg); }
+        .friday-avatar-container.success .lip-lower {
+            height: 10px;
+            width: 28px;
+            background: linear-gradient(180deg, rgba(255, 200, 0, 0.5) 0%, rgba(255, 180, 0, 0.6) 100%);
         }
 
-        /* CONFUSED - Furrowed brows, asymmetric, red tint */
+        /* CONFUSED - Furrowed, shake */
         .friday-avatar-container.confused .holo-face {
-            border-color: rgba(255, 102, 102, 0.5);
-            box-shadow: 0 0 20px rgba(255, 102, 102, 0.4);
+            border-color: rgba(255, 102, 102, 0.4);
+            box-shadow: 0 0 25px rgba(255, 102, 102, 0.3);
             animation: confused-shake 0.3s ease-in-out infinite;
         }
         @keyframes confused-shake {
             0%, 100% { transform: translate(-50%, -50%) rotate(0deg); }
-            25% { transform: translate(-50%, -50%) rotate(2deg); }
-            75% { transform: translate(-50%, -50%) rotate(-2deg); }
+            25% { transform: translate(-50%, -50%) rotate(1.5deg); }
+            75% { transform: translate(-50%, -50%) rotate(-1.5deg); }
         }
-        .friday-avatar-container.confused .holo-glow {
-            background: radial-gradient(ellipse, rgba(255, 102, 102, 0.25) 0%, transparent 70%);
+        .friday-avatar-container.confused .holo-aura {
+            background: radial-gradient(ellipse, rgba(255, 102, 102, 0.15) 0%, transparent 70%);
         }
-        .friday-avatar-container.confused .holo-eye {
-            background: radial-gradient(ellipse, rgba(255,255,255,0.95) 0%, rgba(255,150,150,0.7) 40%, rgba(255,100,100,0.5) 100%);
-            animation: none;
+        .friday-avatar-container.confused .holo-particle {
+            background: rgba(255, 120, 120, 0.8);
         }
-        .friday-avatar-container.confused .holo-eye.left {
-            transform: scaleY(1.1);
+        .friday-avatar-container.confused .holo-eye.left { transform: scaleY(1.05); }
+        .friday-avatar-container.confused .holo-eye.right { transform: scaleY(0.9); }
+        .friday-avatar-container.confused .holo-eye { animation: none; }
+        .friday-avatar-container.confused .holo-iris {
+            background: radial-gradient(circle, rgba(255, 150, 150, 0.9) 0%, rgba(255, 100, 100, 1) 70%, rgba(200, 80, 80, 1) 100%);
         }
-        .friday-avatar-container.confused .holo-eye.right {
-            transform: scaleY(0.9);
-        }
+        .friday-avatar-container.confused .holo-eyebrow.left { transform: rotate(12deg) translateY(3px); }
+        .friday-avatar-container.confused .holo-eyebrow.right { transform: rotate(-12deg) translateY(3px); }
         .friday-avatar-container.confused .holo-eyebrow {
-            background: linear-gradient(90deg, transparent, rgba(255, 102, 102, 0.9), transparent);
+            background: linear-gradient(90deg, transparent, rgba(255, 102, 102, 0.8), transparent);
         }
-        .friday-avatar-container.confused .holo-eyebrow.left {
-            transform: rotate(15deg) translateY(3px);
-        }
-        .friday-avatar-container.confused .holo-eyebrow.right {
-            transform: rotate(-15deg) translateY(3px);
-        }
-        .friday-avatar-container.confused .holo-mouth-line {
-            background: linear-gradient(90deg, transparent, rgba(255, 102, 102, 0.7), transparent);
-        }
-        .friday-avatar-container.confused .holo-mouth-line::before {
-            transform: translateX(-50%) rotate(180deg);
-            border-bottom-color: rgba(255, 102, 102, 0.5);
-        }
+        .friday-avatar-container.confused .lip-upper { transform: translateX(-50%) rotate(180deg) translateY(5px); }
 
-        /* ATTENTIVE - Ready, bright, alert teal */
+        /* ATTENTIVE - Alert, teal */
         .friday-avatar-container.attentive .holo-face {
-            border-color: rgba(0, 221, 170, 0.6);
-            box-shadow: 0 0 25px rgba(0, 221, 170, 0.5), 0 0 50px rgba(0, 200, 150, 0.3);
+            border-color: rgba(0, 221, 170, 0.5);
+            box-shadow: 0 0 35px rgba(0, 221, 170, 0.4), 0 0 70px rgba(0, 200, 150, 0.2);
         }
-        .friday-avatar-container.attentive .holo-glow {
-            background: radial-gradient(ellipse, rgba(0, 221, 170, 0.3) 0%, transparent 70%);
+        .friday-avatar-container.attentive .holo-aura {
+            background: radial-gradient(ellipse, rgba(0, 221, 170, 0.2) 0%, transparent 70%);
+        }
+        .friday-avatar-container.attentive .holo-particle {
+            background: rgba(0, 221, 170, 0.8);
+            box-shadow: 0 0 8px rgba(0, 221, 170, 0.6);
         }
         .friday-avatar-container.attentive .holo-eye {
-            transform: scaleY(1.1);
-            background: radial-gradient(ellipse, rgba(255,255,255,0.95) 0%, rgba(0,221,170,0.8) 40%, rgba(0,200,150,0.6) 100%);
-            box-shadow: 0 0 12px rgba(0, 221, 170, 0.8);
+            transform: scaleY(1.08);
             animation: eye-blink 3.5s ease-in-out infinite;
+        }
+        .friday-avatar-container.attentive .holo-iris {
+            background: radial-gradient(circle, rgba(0, 221, 170, 0.9) 0%, rgba(0, 180, 140, 1) 70%, rgba(0, 140, 100, 1) 100%);
         }
         .friday-avatar-container.attentive .holo-eyebrow {
             transform: translateY(-2px);
-            background: linear-gradient(90deg, transparent, rgba(0, 221, 170, 0.9), transparent);
-        }
-        .friday-avatar-container.attentive .holo-mouth-line {
             background: linear-gradient(90deg, transparent, rgba(0, 221, 170, 0.8), transparent);
         }
-        .friday-avatar-container.attentive .holo-mouth-line::before {
-            border-bottom-color: rgba(0, 221, 170, 0.6);
-        }
 
-        /* PREPARING - Building up, orange/coral */
+        /* PREPARING - Building, orange */
         .friday-avatar-container.preparing .holo-face {
-            border-color: rgba(255, 170, 102, 0.6);
-            box-shadow: 0 0 25px rgba(255, 170, 102, 0.5);
+            border-color: rgba(255, 170, 102, 0.5);
+            box-shadow: 0 0 30px rgba(255, 170, 102, 0.4);
             animation: preparing-pulse 0.8s ease-in-out infinite;
         }
         @keyframes preparing-pulse {
-            0%, 100% { box-shadow: 0 0 25px rgba(255, 170, 102, 0.5); }
-            50% { box-shadow: 0 0 35px rgba(255, 170, 102, 0.8); }
+            0%, 100% { box-shadow: 0 0 30px rgba(255, 170, 102, 0.4); }
+            50% { box-shadow: 0 0 45px rgba(255, 170, 102, 0.7); }
         }
-        .friday-avatar-container.preparing .holo-glow {
-            background: radial-gradient(ellipse, rgba(255, 170, 102, 0.3) 0%, transparent 70%);
-            animation: holo-pulse 0.8s ease-in-out infinite;
+        .friday-avatar-container.preparing .holo-aura {
+            background: radial-gradient(ellipse, rgba(255, 170, 102, 0.2) 0%, transparent 70%);
+            animation: aura-breathe 0.8s ease-in-out infinite;
         }
-        .friday-avatar-container.preparing .holo-eye {
-            background: radial-gradient(ellipse, rgba(255,255,255,0.95) 0%, rgba(255,170,102,0.8) 40%, rgba(255,140,80,0.6) 100%);
-            box-shadow: 0 0 12px rgba(255, 170, 102, 0.8);
-            animation: none;
+        .friday-avatar-container.preparing .holo-particle {
+            background: rgba(255, 170, 102, 0.8);
+            box-shadow: 0 0 8px rgba(255, 170, 102, 0.6);
+        }
+        .friday-avatar-container.preparing .holo-eye { animation: none; }
+        .friday-avatar-container.preparing .holo-iris {
+            background: radial-gradient(circle, rgba(255, 180, 120, 0.9) 0%, rgba(255, 140, 80, 1) 70%, rgba(200, 100, 50, 1) 100%);
         }
         .friday-avatar-container.preparing .holo-eyebrow {
-            background: linear-gradient(90deg, transparent, rgba(255, 170, 102, 0.9), transparent);
-        }
-        .friday-avatar-container.preparing .holo-mouth-line {
             background: linear-gradient(90deg, transparent, rgba(255, 170, 102, 0.8), transparent);
         }
 
@@ -2512,130 +2993,77 @@
             color: #00ff88;
         }
 
-        /* Responsive */
+        /* Responsive - larger on mobile for focal point */
         @media (max-width: 480px) {
             .friday-avatar-container {
-                width: 100px;
-                height: 100px;
+                width: 280px;
+                height: 350px;
+                position: static;
             }
-            .avatar-glow { width: 120px; height: 120px; }
-            .avatar-ring-outer { width: 95px; height: 95px; }
-            .avatar-ring-middle { width: 82px; height: 82px; }
-            .avatar-ring-inner { width: 70px; height: 70px; }
-            .avatar-energy { width: 60px; height: 60px; }
-            .avatar-core { width: 45px; height: 45px; }
-            .avatar-particles { width: 85px; height: 85px; }
-            .avatar-arc-lines { width: 55px; height: 55px; }
-            .arc-line { width: 25px; }
         }
 
         /* ============================================
-           SPATIAL AWARENESS SYSTEM
+           AVATAR CENTERING - CLEAN, NO BOX
            ============================================ */
 
-        /* Spatial container - the field FRIDAI can move within */
+        /* Spatial field - invisible flex container */
         .spatial-field {
-            position: relative;
             width: 100%;
-            max-width: 300px;
-            height: 220px;
-            margin: 0 auto 10px;
+            flex: 1;
+            min-height: 50vh;
             display: flex;
             justify-content: center;
             align-items: center;
+            background: transparent;
+            border: none;
+            outline: none;
+            box-shadow: none;
         }
 
-        /* Make avatar container absolutely positioned within spatial field */
-        .spatial-field .friday-avatar-container {
-            position: absolute;
-            left: 50%;
-            top: 50%;
-            transform: translate(-50%, -50%);
-            transition: left 0.5s ease-out, top 0.5s ease-out;
-            margin: 0;
+        /* No pseudo-elements */
+        .spatial-field::before,
+        .spatial-field::after {
+            display: none !important;
+            content: none !important;
         }
 
-        /* Speed variations for movement */
-        .spatial-field .friday-avatar-container.move-slow {
-            transition: left 1.2s ease-in-out, top 1.2s ease-in-out;
+        /* Force avatar to stay in place - no positioning allowed */
+        .friday-avatar-container {
+            position: static !important;
+            left: auto !important;
+            top: auto !important;
+            right: auto !important;
+            bottom: auto !important;
+            margin: 0 !important;
+            background: transparent !important;
+            border: none !important;
+            outline: none !important;
+            box-shadow: none !important;
         }
 
-        .spatial-field .friday-avatar-container.move-fast {
-            transition: left 0.2s ease-out, top 0.2s ease-out;
+        /* Simple gesture animations */
+        .friday-avatar-container.gesture-nod {
+            animation: nod-anim 0.5s ease-in-out;
+        }
+        .friday-avatar-container.gesture-shake {
+            animation: shake-anim 0.4s ease-in-out;
+        }
+        .friday-avatar-container.gesture-bounce {
+            animation: bounce-anim 0.6s ease-in-out;
         }
 
-        /* Gesture animations */
-        @keyframes spatial-nod {
-            0%, 100% { transform: translate(-50%, -50%); }
-            25% { transform: translate(-50%, calc(-50% - 8px)); }
-            75% { transform: translate(-50%, calc(-50% + 8px)); }
+        @keyframes nod-anim {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
         }
-
-        @keyframes spatial-shake {
-            0%, 100% { transform: translate(-50%, -50%); }
-            20% { transform: translate(calc(-50% - 10px), -50%); }
-            40% { transform: translate(calc(-50% + 10px), -50%); }
-            60% { transform: translate(calc(-50% - 8px), -50%); }
-            80% { transform: translate(calc(-50% + 6px), -50%); }
+        @keyframes shake-anim {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-6px); }
+            75% { transform: translateX(6px); }
         }
-
-        @keyframes spatial-bounce {
-            0%, 100% { transform: translate(-50%, -50%) scale(1); }
-            25% { transform: translate(-50%, calc(-50% - 15px)) scale(1.05); }
-            50% { transform: translate(-50%, -50%) scale(0.98); }
-            75% { transform: translate(-50%, calc(-50% - 10px)) scale(1.02); }
-        }
-
-        @keyframes spatial-circle {
-            0% { transform: translate(-50%, -50%); }
-            25% { transform: translate(calc(-50% + 15px), calc(-50% - 10px)); }
-            50% { transform: translate(calc(-50% + 5px), calc(-50% + 15px)); }
-            75% { transform: translate(calc(-50% - 15px), calc(-50% - 5px)); }
-            100% { transform: translate(-50%, -50%); }
-        }
-
-        @keyframes spatial-expand {
-            0%, 100% { transform: translate(-50%, -50%) scale(1); }
-            50% { transform: translate(-50%, -50%) scale(1.15); }
-        }
-
-        .spatial-field .friday-avatar-container.gesture-nod {
-            animation: spatial-nod 0.6s ease-in-out;
-        }
-
-        .spatial-field .friday-avatar-container.gesture-shake {
-            animation: spatial-shake 0.5s ease-in-out;
-        }
-
-        .spatial-field .friday-avatar-container.gesture-bounce {
-            animation: spatial-bounce 0.7s ease-in-out;
-        }
-
-        .spatial-field .friday-avatar-container.gesture-circle {
-            animation: spatial-circle 1.2s ease-in-out;
-        }
-
-        .spatial-field .friday-avatar-container.gesture-expand {
-            animation: spatial-expand 0.8s ease-in-out;
-        }
-
-        /* Visual indicator of spatial field bounds (subtle) */
-        .spatial-field::before {
-            content: '';
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            right: 10px;
-            bottom: 10px;
-            border: 1px dashed rgba(0, 217, 255, 0.1);
-            border-radius: 20px;
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 0.3s;
-        }
-
-        .spatial-field.show-bounds::before {
-            opacity: 1;
+        @keyframes bounce-anim {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
         }
 
         /* Memory Panel (Slide-out) */
@@ -2974,45 +3402,12 @@
             </div>
         </header>
 
-        <!-- FRIDAY Avatar - Holographic Face with Spatial Awareness -->
-        <div class="spatial-field" id="spatialField">
-            <div class="friday-avatar-container" id="fridayAvatar"
-                 ontouchstart="handleAvatarStart(event)"
-                 ontouchend="handleAvatarEnd(event)"
-                 onmousedown="handleAvatarStart(event)"
-                 onmouseup="handleAvatarEnd(event)">
-                <!-- Holographic Glow -->
-                <div class="holo-glow"></div>
-
-                <!-- Face Container -->
-                <div class="holo-face">
-                    <!-- Eyebrows -->
-                    <div class="holo-eyebrow left"></div>
-                    <div class="holo-eyebrow right"></div>
-
-                    <!-- Eyes -->
-                    <div class="holo-eye left">
-                        <div class="holo-pupil"></div>
-                        <div class="holo-eye-highlight"></div>
-                    </div>
-                    <div class="holo-eye right">
-                        <div class="holo-pupil"></div>
-                        <div class="holo-eye-highlight"></div>
-                    </div>
-
-                    <!-- Nose (subtle) -->
-                    <div class="holo-nose"></div>
-
-                    <!-- Mouth -->
-                    <div class="holo-mouth">
-                        <div class="holo-mouth-line"></div>
-                    </div>
-                </div>
-
-                <!-- Holographic Effects -->
-                <div class="holo-scanlines"></div>
-                <div class="holo-flicker"></div>
-            </div>
+        <!-- FRIDAY Avatar - 3D Audio-Reactive Sphere -->
+        <div class="fridai-display" id="fridayAvatar"
+             ontouchstart="handleAvatarStart(event)"
+             ontouchend="handleAvatarEnd(event)"
+             onclick="handleAvatarStart(event)">
+            <canvas id="sphereCanvas"></canvas>
         </div>
         <div class="avatar-status" id="avatarStatus">Tap to speak</div>
 
@@ -3102,10 +3497,22 @@
             </div>
         </div>
 
-        <div class="chat-container" id="chat">
-            <div class="message assistant" id="greeting-msg">
-                <div class="sender">F.R.I.D.A.I.</div>
-                <div class="text" id="greeting-text">Say "Hey Friday" to wake me up...</div>
+        <!-- Chat Toggle Button -->
+        <button class="chat-toggle-btn" id="chatToggle" onclick="toggleChatPanel()" title="Toggle Chat">
+            💬
+        </button>
+
+        <!-- Collapsible Chat Panel -->
+        <div class="chat-panel" id="chatPanel">
+            <div class="chat-panel-header">
+                <h3>Conversation</h3>
+                <button class="chat-panel-close" onclick="toggleChatPanel()">×</button>
+            </div>
+            <div class="chat-container" id="chat">
+                <div class="message assistant" id="greeting-msg">
+                    <div class="sender">F.R.I.D.A.I.</div>
+                    <div class="text" id="greeting-text">Say "Hey Friday" to wake me up...</div>
+                </div>
             </div>
         </div>
 
@@ -3214,6 +3621,333 @@
             }
             return originalFetch(url, options);
         };
+
+        // ============================================
+        // CHAT PANEL TOGGLE
+        // ============================================
+        let chatPanelOpen = false;
+
+        function toggleChatPanel() {
+            const panel = document.getElementById('chatPanel');
+            const toggle = document.getElementById('chatToggle');
+            chatPanelOpen = !chatPanelOpen;
+
+            if (chatPanelOpen) {
+                panel.classList.add('open');
+                toggle.classList.remove('has-new');
+            } else {
+                panel.classList.remove('open');
+            }
+        }
+
+        // Notify chat has new message (pulse the button)
+        function notifyChatUpdate() {
+            const toggle = document.getElementById('chatToggle');
+            if (!chatPanelOpen && toggle) {
+                toggle.classList.add('has-new');
+            }
+        }
+
+        // ============================================
+        // THREE.JS AUDIO-REACTIVE SPHERE
+        // ============================================
+        let sphereScene, sphereCamera, sphereRenderer, sphere;
+        let sphereAudioData = new Uint8Array(128);
+        let sphereTargetDisplacement = 0;
+        let sphereCurrentDisplacement = 0;
+        let sphereBaseColor = { r: 0, g: 0.85, b: 1 }; // Cyan
+        let sphereTargetColor = { r: 0, g: 0.85, b: 1 };
+        let sphereTime = 0;
+        let originalPositions = null;
+        let sphereOutputAnalyser = null;
+        let sphereOutputAudioContext = null;
+
+        function initSphere() {
+            const canvas = document.getElementById('sphereCanvas');
+            if (!canvas || typeof THREE === 'undefined') {
+                console.log('Three.js or canvas not ready, retrying...');
+                setTimeout(initSphere, 100);
+                return;
+            }
+
+            const container = canvas.parentElement;
+            const size = Math.min(container.clientWidth, container.clientHeight, 400);
+
+            // Scene setup
+            sphereScene = new THREE.Scene();
+
+            // Camera
+            sphereCamera = new THREE.PerspectiveCamera(45, 1, 0.1, 1000);
+            sphereCamera.position.z = 3;
+
+            // Renderer
+            sphereRenderer = new THREE.WebGLRenderer({
+                canvas: canvas,
+                antialias: true,
+                alpha: true
+            });
+            sphereRenderer.setSize(size, size);
+            sphereRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            sphereRenderer.setClearColor(0x000000, 0);
+
+            // Create sphere geometry with enough vertices for smooth deformation
+            const geometry = new THREE.IcosahedronGeometry(1, 5);
+            originalPositions = geometry.attributes.position.array.slice();
+
+            // Custom shader material for glowing effect
+            const material = new THREE.ShaderMaterial({
+                uniforms: {
+                    uTime: { value: 0 },
+                    uColor: { value: new THREE.Color(0, 0.85, 1) },
+                    uGlow: { value: 0.5 },
+                    uDisplacement: { value: 0 }
+                },
+                vertexShader: `
+                    varying vec3 vNormal;
+                    varying vec3 vPosition;
+                    void main() {
+                        vNormal = normalize(normalMatrix * normal);
+                        vPosition = position;
+                        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                    }
+                `,
+                fragmentShader: `
+                    uniform float uTime;
+                    uniform vec3 uColor;
+                    uniform float uGlow;
+                    varying vec3 vNormal;
+                    varying vec3 vPosition;
+
+                    void main() {
+                        // Fresnel effect for edge glow
+                        vec3 viewDir = normalize(cameraPosition - vPosition);
+                        float fresnel = pow(1.0 - abs(dot(vNormal, viewDir)), 2.0);
+
+                        // Core color with fresnel glow
+                        vec3 coreColor = uColor * 0.6;
+                        vec3 glowColor = uColor * (1.0 + uGlow);
+                        vec3 finalColor = mix(coreColor, glowColor, fresnel * (0.5 + uGlow * 0.5));
+
+                        // Add subtle pulsing
+                        float pulse = sin(uTime * 2.0) * 0.1 + 0.9;
+                        finalColor *= pulse;
+
+                        // Transparency based on fresnel
+                        float alpha = 0.7 + fresnel * 0.3;
+
+                        gl_FragColor = vec4(finalColor, alpha);
+                    }
+                `,
+                transparent: true,
+                side: THREE.DoubleSide
+            });
+
+            sphere = new THREE.Mesh(geometry, material);
+            sphere.renderOrder = 1;
+            material.depthWrite = false;  // Allow core to show through
+            sphereScene.add(sphere);
+
+            // Add ambient glow sphere (outer)
+            const glowGeometry = new THREE.IcosahedronGeometry(1.15, 3);
+            const glowMaterial = new THREE.ShaderMaterial({
+                uniforms: {
+                    uColor: { value: new THREE.Color(0, 0.85, 1) },
+                    uGlow: { value: 0.3 }
+                },
+                vertexShader: `
+                    varying vec3 vNormal;
+                    void main() {
+                        vNormal = normalize(normalMatrix * normal);
+                        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                    }
+                `,
+                fragmentShader: `
+                    uniform vec3 uColor;
+                    uniform float uGlow;
+                    varying vec3 vNormal;
+                    void main() {
+                        float intensity = pow(0.6 - dot(vNormal, vec3(0.0, 0.0, 1.0)), 2.0);
+                        gl_FragColor = vec4(uColor, intensity * uGlow * 0.5);
+                    }
+                `,
+                transparent: true,
+                side: THREE.BackSide,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false
+            });
+            const glowSphere = new THREE.Mesh(glowGeometry, glowMaterial);
+            glowSphere.name = 'glow';
+            glowSphere.renderOrder = 2;
+            sphereScene.add(glowSphere);
+
+            // Add inner core sphere - bright solid center that shows mood color
+            const coreGeometry = new THREE.SphereGeometry(0.3, 32, 32);
+            const coreMaterial = new THREE.MeshBasicMaterial({
+                color: new THREE.Color(1, 1, 1),  // Start white/bright
+                transparent: true,
+                opacity: 0.95,
+                depthTest: false  // Always render on top
+            });
+            const coreSphere = new THREE.Mesh(coreGeometry, coreMaterial);
+            coreSphere.name = 'core';
+            coreSphere.renderOrder = 999;  // Render last, on top
+            sphereScene.add(coreSphere);
+
+            // Set initial core color
+            coreSphere.material.color.setRGB(0.2, 1, 1);
+
+            // Start animation loop
+            animateSphere();
+
+            // Handle resize
+            window.addEventListener('resize', () => {
+                const container = canvas.parentElement;
+                const size = Math.min(container.clientWidth, container.clientHeight, 400);
+                sphereRenderer.setSize(size, size);
+            });
+
+            console.log('Three.js sphere initialized');
+        }
+
+        function animateSphere() {
+            requestAnimationFrame(animateSphere);
+            if (!sphere || !sphereRenderer) return;
+
+            sphereTime += 0.016;
+
+            // Smooth displacement interpolation
+            sphereCurrentDisplacement += (sphereTargetDisplacement - sphereCurrentDisplacement) * 0.15;
+
+            // Smooth color interpolation
+            sphereBaseColor.r += (sphereTargetColor.r - sphereBaseColor.r) * 0.08;
+            sphereBaseColor.g += (sphereTargetColor.g - sphereBaseColor.g) * 0.08;
+            sphereBaseColor.b += (sphereTargetColor.b - sphereBaseColor.b) * 0.08;
+
+            // Update uniforms
+            sphere.material.uniforms.uTime.value = sphereTime;
+            sphere.material.uniforms.uColor.value.setRGB(sphereBaseColor.r, sphereBaseColor.g, sphereBaseColor.b);
+            sphere.material.uniforms.uGlow.value = 0.3 + sphereCurrentDisplacement * 2;
+
+            // Update glow sphere
+            const glowSphere = sphereScene.getObjectByName('glow');
+            if (glowSphere) {
+                glowSphere.material.uniforms.uColor.value.setRGB(sphereBaseColor.r, sphereBaseColor.g, sphereBaseColor.b);
+                glowSphere.material.uniforms.uGlow.value = 0.2 + sphereCurrentDisplacement;
+                glowSphere.scale.setScalar(1 + sphereCurrentDisplacement * 0.1);
+            }
+
+            // Apply vertex displacement for ripple effect
+            const positions = sphere.geometry.attributes.position.array;
+            for (let i = 0; i < positions.length; i += 3) {
+                const ox = originalPositions[i];
+                const oy = originalPositions[i + 1];
+                const oz = originalPositions[i + 2];
+
+                // Calculate displacement based on position and time
+                const dist = Math.sqrt(ox * ox + oy * oy + oz * oz);
+                const angle = Math.atan2(oy, ox);
+                const phi = Math.acos(oz / dist);
+
+                // Multiple wave patterns for organic feel
+                const wave1 = Math.sin(phi * 4 + sphereTime * 3) * 0.02;
+                const wave2 = Math.sin(angle * 3 + sphereTime * 2) * 0.015;
+                const wave3 = Math.sin(phi * 2 + angle * 2 + sphereTime * 4) * 0.01;
+
+                // Audio-reactive displacement
+                const audioWave = sphereCurrentDisplacement * Math.sin(phi * 8 + angle * 6 + sphereTime * 5) * 0.15;
+
+                const totalDisplacement = 1 + wave1 + wave2 + wave3 + audioWave;
+
+                positions[i] = ox * totalDisplacement;
+                positions[i + 1] = oy * totalDisplacement;
+                positions[i + 2] = oz * totalDisplacement;
+            }
+            sphere.geometry.attributes.position.needsUpdate = true;
+
+            // Gentle rotation
+            sphere.rotation.y += 0.003;
+            sphere.rotation.x = Math.sin(sphereTime * 0.5) * 0.1;
+
+            sphereRenderer.render(sphereScene, sphereCamera);
+        }
+
+        // Update sphere based on audio level (0-1)
+        function updateSphereAudio(level) {
+            sphereTargetDisplacement = Math.min(level * 1.5, 1);
+        }
+
+        // Update sphere color based on mood/state
+        function updateSphereState(state) {
+            const colors = {
+                'chill': { r: 0, g: 0.85, b: 1 },       // Cyan
+                'listening': { r: 0, g: 1, b: 0.53 },    // Green
+                'thinking': { r: 0.6, g: 0.4, b: 1 },    // Purple
+                'speaking': { r: 1, g: 0.4, b: 0.4 },    // Red/Pink
+                'working': { r: 1, g: 0.67, b: 0.2 },    // Orange
+                'success': { r: 1, g: 0.84, b: 0 },      // Gold
+                'sleeping': { r: 0.4, g: 0.4, b: 0.6 },  // Dim blue
+                'preparing': { r: 0.8, g: 0.6, b: 1 },   // Light purple
+                'attentive': { r: 0, g: 0.9, b: 0.8 }    // Teal
+            };
+            const color = colors[state] || colors['chill'];
+            sphereTargetColor = { ...color };
+
+            // Update core sphere color immediately (brighter version)
+            if (sphereScene) {
+                const core = sphereScene.getObjectByName('core');
+                if (core) {
+                    core.material.color.setRGB(
+                        Math.min(1, color.r * 1.2),
+                        Math.min(1, color.g * 1.2),
+                        Math.min(1, color.b * 1.2)
+                    );
+                }
+            }
+        }
+
+        // Simulate audio reactivity when speaking (since connecting to each new Audio element is problematic)
+        let speakingAnimationActive = false;
+        let speakingAnimationFrame = null;
+
+        function startSpeakingAnimation() {
+            if (speakingAnimationActive) return;
+            speakingAnimationActive = true;
+
+            let phase = 0;
+            function animateSpeaking() {
+                if (!speakingAnimationActive) {
+                    updateSphereAudio(0);
+                    return;
+                }
+
+                // Create natural speech-like rhythm with varying intensity
+                phase += 0.15;
+                const base = 0.3;
+                const variation = Math.sin(phase) * 0.2 + Math.sin(phase * 2.3) * 0.15 + Math.sin(phase * 0.7) * 0.1;
+                const randomness = (Math.random() - 0.5) * 0.1;
+                const level = Math.max(0, Math.min(1, base + variation + randomness));
+
+                updateSphereAudio(level);
+                speakingAnimationFrame = requestAnimationFrame(animateSpeaking);
+            }
+            animateSpeaking();
+        }
+
+        function stopSpeakingAnimation() {
+            speakingAnimationActive = false;
+            if (speakingAnimationFrame) {
+                cancelAnimationFrame(speakingAnimationFrame);
+                speakingAnimationFrame = null;
+            }
+            updateSphereAudio(0);
+        }
+
+        // Initialize sphere when page loads
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initSphere);
+        } else {
+            setTimeout(initSphere, 50);
+        }
 
         let mediaRecorder;
         let audioChunks = [];
@@ -3589,6 +4323,11 @@
                     voiceLevelContainer.classList.add("active");
                     const levelPercent = Math.min(100, (average / 50) * 100);
                     voiceLevelFill.style.width = levelPercent + "%";
+                }
+
+                // Update 3D sphere with audio level
+                if (typeof updateSphereAudio === 'function') {
+                    updateSphereAudio(average / 100);
                 }
 
                 if (average > SILENCE_THRESHOLD) {
@@ -4007,6 +4746,10 @@
                 currentAudio = new Audio('data:audio/mpeg;base64,' + data.audio);
 
                 currentAudio.onended = () => {
+                    // Stop sphere speaking animation
+                    if (typeof stopSpeakingAnimation === 'function') {
+                        stopSpeakingAnimation();
+                    }
                     currentAudio = null;
                     isProcessing = false;
 
@@ -4023,12 +4766,20 @@
                 currentAudio.onerror = (e) => {
                     console.error('Audio error:', e);
                     setStatus('Audio error - try again');
+                    // Stop sphere animation on error
+                    if (typeof stopSpeakingAnimation === 'function') {
+                        stopSpeakingAnimation();
+                    }
                     currentAudio = null;
                     isProcessing = false;
                 };
 
                 try {
                     setAvatarState('speaking');
+                    // Start sphere speaking animation
+                    if (typeof startSpeakingAnimation === 'function') {
+                        startSpeakingAnimation();
+                    }
                     await currentAudio.play();
                 } catch (playError) {
                     console.log('Autoplay blocked:', playError.message);
@@ -4037,7 +4788,13 @@
 
                     const playOnTap = async () => {
                         try {
-                            if (currentAudio) await currentAudio.play();
+                            if (currentAudio) {
+                                await currentAudio.play();
+                                // Start sphere speaking animation on manual tap
+                                if (typeof startSpeakingAnimation === 'function') {
+                                    startSpeakingAnimation();
+                                }
+                            }
                         } catch (e) {
                             console.error('Play failed:', e);
                         }
@@ -4061,6 +4818,8 @@
             div.innerHTML = `<div class="sender">${sender === 'user' ? 'You' : 'F.R.I.D.A.I.'}</div><div class="text">${text}</div>`;
             chat.appendChild(div);
             chat.scrollTop = chat.scrollHeight;
+            // Notify chat toggle if panel is closed
+            notifyChatUpdate();
         }
 
         function addToolIndicator(toolName, input, result) {
@@ -4126,68 +4885,29 @@
         }
 
         // ============================================
-        // SPATIAL AWARENESS SYSTEM
+        // GESTURE SYSTEM (Movement removed)
         // ============================================
 
-        // Convert 0-100 position to CSS percentage
-        function positionToPercent(val) {
-            // val 0-100 maps to 10%-90% to keep within bounds with padding
-            return 10 + (val * 0.8);
-        }
+        // Movement functions - completely disabled
+        function positionToPercent(val) { return 50; }
+        function moveAvatarTo(x, y, speed) { /* disabled */ }
 
-        // Move avatar to a specific position
-        function moveAvatarTo(x, y, speed = 'normal') {
-            const avatar = document.getElementById('fridayAvatar');
-            if (!avatar) return;
-
-            // Remove existing speed classes
-            avatar.classList.remove('move-slow', 'move-fast');
-
-            // Add speed class
-            if (speed === 'slow') avatar.classList.add('move-slow');
-            else if (speed === 'fast') avatar.classList.add('move-fast');
-
-            // Set position (convert 0-100 to percentage)
-            const leftPercent = positionToPercent(x);
-            const topPercent = positionToPercent(y);
-            avatar.style.left = leftPercent + '%';
-            avatar.style.top = topPercent + '%';
-        }
-
-        // Play a gesture animation
+        // Play gesture animations only (no position changes)
         function playGesture(gestureName) {
             const avatar = document.getElementById('fridayAvatar');
             if (!avatar) return;
 
-            // Map gesture names to CSS classes
+            // Only allow visual gestures, ignore position-based ones
             const gestureMap = {
                 'nod': 'gesture-nod',
                 'shake': 'gesture-shake',
                 'bounce': 'gesture-bounce',
                 'circle': 'gesture-circle',
-                'pulse_expand': 'gesture-expand',
-                'approach': null,  // These are position changes, not animations
-                'retreat': null,
-                'drift_left': null,
-                'drift_right': null,
-                'settle': null
+                'pulse_expand': 'gesture-expand'
             };
 
-            // Handle position-based gestures
-            if (gestureName === 'approach') {
-                moveAvatarTo(50, 30, 'normal');  // Move up
-                return;
-            } else if (gestureName === 'retreat') {
-                moveAvatarTo(50, 70, 'slow');  // Move down
-                return;
-            } else if (gestureName === 'drift_left') {
-                moveAvatarTo(30, 50, 'slow');
-                return;
-            } else if (gestureName === 'drift_right') {
-                moveAvatarTo(70, 50, 'slow');
-                return;
-            } else if (gestureName === 'settle') {
-                moveAvatarTo(50, 50, 'slow');
+            // Ignore position-based gestures completely
+            if (['approach', 'retreat', 'drift_left', 'drift_right', 'settle'].includes(gestureName)) {
                 return;
             }
 
@@ -4210,46 +4930,30 @@
                 'gesture-circle': 1200,
                 'gesture-expand': 800
             };
-            const duration = durations[gestureClass] || 600;
 
             setTimeout(() => {
                 avatar.classList.remove(gestureClass);
-                // Notify server gesture is complete
-                fetch('/spatial', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action: 'gesture_complete' })
-                }).catch(() => {});
-            }, duration);
+            }, durations[gestureClass] || 600);
         }
 
-        // Handle spatial actions from API response
+        // Handle spatial actions - gestures only, movement ignored
         function handleSpatialActions(spatialActions, spatialState) {
             if (!spatialActions || spatialActions.length === 0) return;
 
             spatialActions.forEach(action => {
-                if (action.action === 'move') {
-                    moveAvatarTo(
-                        action.moved_to.x,
-                        action.moved_to.y,
-                        action.speed || 'normal'
-                    );
-                } else if (action.action === 'gesture') {
+                // Only handle gestures, ignore all movement
+                if (action.action === 'gesture') {
                     playGesture(action.gesture);
                 }
+                // 'move' actions are ignored
             });
         }
 
-        // Initialize spatial position from server
-        async function initSpatialState() {
-            try {
-                const res = await fetch('/spatial');
-                const data = await res.json();
-                if (data.position) {
-                    moveAvatarTo(data.position.x, data.position.y, 'fast');
-                }
-            } catch (e) {
-                console.log('Could not load spatial state');
+        // Clear any position styles on load
+        function initSpatialState() {
+            const avatar = document.getElementById('fridayAvatar');
+            if (avatar) {
+                avatar.removeAttribute('style');
             }
         }
 
@@ -4259,7 +4963,7 @@
 
         // Register service worker for PWA
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js', {updateViaCache: 'none'})
+            navigator.serviceWorker.register('/sw.js?v=186', {updateViaCache: 'none'})
                 .then(reg => console.log('Service Worker registered'))
                 .catch(err => console.log('SW registration failed:', err));
         }
@@ -4324,7 +5028,8 @@
         // Enhanced Avatar State Management with Full Mood System
         const ALL_AVATAR_STATES = [
             'listening', 'thinking', 'speaking', 'sleeping', 'preparing',
-            'chill', 'attentive', 'working', 'searching', 'success', 'confused'
+            'chill', 'attentive', 'working', 'searching', 'success', 'confused',
+            'upset', 'annoyed', 'excited'
         ];
 
         let currentAvatarState = '';
@@ -4348,7 +5053,13 @@
                 avatar.classList.add(state);
             }
             currentAvatarState = state;
-            
+
+            // Update 3D sphere color for the mood
+            const moodToUse = state || 'chill';
+            if (typeof updateSphereState === 'function') {
+                updateSphereState(moodToUse);
+            }
+
             // Report state to backend so FRIDAY can see herself
             reportUIState({ mood: state });
 
@@ -4365,7 +5076,10 @@
                 'preparing': 'Getting ready...',
                 'success': 'Done!',
                 'confused': 'Hmm?',
-                'sleeping': 'Say "Hey Friday"'
+                'sleeping': 'Say "Hey Friday"',
+                'upset': 'Not happy...',
+                'annoyed': 'Really?',
+                'excited': 'Yes!'
             };
             statusEl.textContent = statusTexts[state] || 'Tap to speak';
 
@@ -5003,8 +5717,11 @@
             if (savedTheme && savedTheme !== 'default') {
                 currentTheme = savedTheme;
                 document.body.classList.add('theme-' + savedTheme);
-                const themeNames = { 'default': 'Default', 'ironman': 'Iron Man', 'arc': 'Arc Reactor' };
-                document.getElementById('themeToggle').textContent = '🎨 ' + themeNames[savedTheme];
+                const toggle = document.getElementById('themeToggle');
+                if (toggle) {
+                    const themeNames = { 'default': 'Default', 'ironman': 'Iron Man', 'arc': 'Arc Reactor' };
+                    toggle.textContent = '🎨 ' + themeNames[savedTheme];
+                }
             }
         }
         loadTheme();
