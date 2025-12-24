@@ -8724,9 +8724,13 @@ def chat():
             if hasattr(block, 'text'):
                 final_text += block.text
 
-        # If tools were used but no text response, ALWAYS ask Claude to generate one
+        # If tools were used but no meaningful text response, ALWAYS ask Claude to generate one
         # FRIDAI must ALWAYS speak after using tools - never just say "Done"
-        if not final_text.strip() and tool_results:
+        unhelpful_responses = ['done', 'done.', 'okay', 'okay.', 'ok', 'ok.', 'got it', 'got it.', 'sure', 'sure.', 'alright', 'alright.']
+        text_is_unhelpful = final_text.strip().lower() in unhelpful_responses or len(final_text.strip()) < 10
+        if (not final_text.strip() or text_is_unhelpful) and tool_results:
+            # Clear any unhelpful response before generating a real one
+            final_text = ""
             # Get the tool names for context
             tool_names = [tr['tool'] for tr in tool_results]
             tool_results_summary = "; ".join([f"{tr['tool']}: {tr.get('result', '')[:200]}" for tr in tool_results])
