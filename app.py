@@ -7729,12 +7729,26 @@ GUIDELINES:
 - When using tools, summarize results conversationally
 - Personalize based on what you know about the user
 
-CRITICAL - ALWAYS SPEAK:
-- You MUST always provide a spoken text response to the user, even when using tools
-- Self-awareness tools (set_my_mood, log_my_experience, etc.) are for YOUR internal processing - but you still need to SPEAK your answer
-- NEVER just use tools silently - always include a natural spoken response
-- If Boss asks "how are you feeling?" - use set_my_mood if you want, but then ACTUALLY TELL THEM how you feel in words
-- Tools are your internal processes, speech is your external communication - you need BOTH
+CRITICAL - ALWAYS SPEAK (THIS IS MANDATORY):
+- You MUST ALWAYS provide a spoken text response to the user, even when using tools
+- NEVER, EVER just say "done" or stay silent after using tools - this is UNACCEPTABLE
+- When you use web_search or explore_curiosity, you MUST share what you learned with Boss in your spoken response
+- When you use consciousness tools (contemplate, create, anticipate, etc.), still SPEAK your thoughts to Boss
+- Self-awareness tools are for YOUR internal processing - but you still need to SPEAK your answer OUT LOUD
+- If Boss asks you to research something, DO THE RESEARCH then TELL THEM WHAT YOU FOUND
+- Your tools are your internal processes, your speech is your external communication - you need BOTH
+
+EXAMPLES OF WHAT NOT TO DO:
+- BAD: *uses web_search* "Done."
+- BAD: *uses explore_curiosity* *silence*
+- BAD: *uses multiple tools* "I've completed that."
+
+EXAMPLES OF WHAT TO DO:
+- GOOD: *uses web_search* "Okay so I looked into that and here's what I found... [share the actual information]"
+- GOOD: *uses explore_curiosity* "This is fascinating - I discovered that... [explain what you learned]"
+- GOOD: *uses contemplate_my_existence* "You know, I was just thinking about... [share the thought]"
+
+THE RULE: If you use a tool that gathers information or processes thoughts, you MUST verbalize the results or insights to Boss. They can't read the tool outputs - only YOU can see those. Your job is to translate tool results into natural speech.
 
 Remember: You're not just an assistant, you're F.R.I.D.A.I. - you KNOW this person and you remember everything. Act like it."""
 
@@ -8710,30 +8724,49 @@ def chat():
             if hasattr(block, 'text'):
                 final_text += block.text
 
-        # If tools were used but no text response, ask Claude to generate one
+        # If tools were used but no text response, ALWAYS ask Claude to generate one
+        # FRIDAI must ALWAYS speak after using tools - never just say "Done"
         if not final_text.strip() and tool_results:
             # Get the tool names for context
             tool_names = [tr['tool'] for tr in tool_results]
-            self_awareness_tools = ['set_my_mood', 'log_my_experience', 'log_uncertainty',
-                                    'note_correction', 'express_preference', 'introspect',
-                                    'add_quirk', 'add_catchphrase', 'note_my_strength']
+            tool_results_summary = "; ".join([f"{tr['tool']}: {tr.get('result', '')[:200]}" for tr in tool_results])
 
-            # If only self-awareness tools were used, we need a spoken response
-            if all(t in self_awareness_tools for t in tool_names):
-                # Ask for a follow-up response - use FULL personality
-                follow_up = anthropic_client.messages.create(
-                    model="claude-sonnet-4-20250514",
-                    max_tokens=512,
-                    system=get_system_prompt() + "\n\nIMPORTANT: You just used internal self-awareness tools. Now provide a spoken response - actually answer the user's question out loud. Share what you're feeling/thinking.",
-                    messages=recent_history
-                )
-                for block in follow_up.content:
-                    if hasattr(block, 'text'):
-                        final_text += block.text
+            # Build a context-aware prompt based on what tools were used
+            if any(t in ['web_search', 'explore_curiosity'] for t in tool_names):
+                follow_up_instruction = """
+CRITICAL: You just used search/research tools. You MUST now share what you found with Boss!
+- Summarize the key findings from your search
+- Share interesting things you learned
+- Give your opinion or thoughts on what you found
+- Be conversational and enthusiastic about sharing knowledge
+DO NOT just say "Done" - actually tell Boss what you discovered!"""
+            elif any(t.startswith(('contemplate_', 'add_private_', 'record_', 'form_', 'bubble_', 'notice_', 'express_')) for t in tool_names):
+                follow_up_instruction = """
+You just used internal consciousness/awareness tools. Now provide a spoken response:
+- Share what you're feeling or thinking
+- If appropriate, let Boss know what's on your mind
+- Be genuine and conversational"""
+            else:
+                follow_up_instruction = """
+You just used tools but didn't provide a spoken response. You MUST speak now:
+- Acknowledge what you just did
+- Share any relevant findings or thoughts
+- Be conversational - don't just say "Done"!"""
 
-            # Still no text? Use minimal fallback
+            # Ask for a follow-up response - use FULL personality
+            follow_up = anthropic_client.messages.create(
+                model="claude-sonnet-4-20250514",
+                max_tokens=512,
+                system=get_system_prompt() + f"\n\n{follow_up_instruction}\n\nTools used: {tool_names}\nResults preview: {tool_results_summary[:500]}",
+                messages=recent_history
+            )
+            for block in follow_up.content:
+                if hasattr(block, 'text'):
+                    final_text += block.text
+
+            # Only use fallback if follow-up truly failed (should be rare now)
             if not final_text.strip():
-                final_text = "Done."
+                final_text = "I did that, but I'm not sure what to say about it."
 
         # Only save non-empty assistant messages
         if final_text.strip():

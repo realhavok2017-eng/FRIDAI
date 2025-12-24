@@ -4961,10 +4961,66 @@
         init();
         initSpatialState();
 
-        // Register service worker for PWA
+        // Register service worker for PWA and push notifications
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js?v=186', {updateViaCache: 'none'})
-                .then(reg => console.log('Service Worker registered'))
+            navigator.serviceWorker.register('/sw.js?v=188', {updateViaCache: 'none'})
+                .then(async (reg) => {
+                    console.log('Service Worker registered');
+
+                    // Set up push notifications
+                    if ('PushManager' in window) {
+                        try {
+                            // Get VAPID public key from server
+                            const vapidResponse = await fetch('/vapid_public_key');
+                            const vapidData = await vapidResponse.json();
+
+                            if (vapidData.publicKey) {
+                                // Check if already subscribed
+                                const existingSub = await reg.pushManager.getSubscription();
+
+                                if (!existingSub) {
+                                    // Ask for permission
+                                    const permission = await Notification.requestPermission();
+
+                                    if (permission === 'granted') {
+                                        // Convert VAPID key to Uint8Array
+                                        const urlBase64ToUint8Array = (base64String) => {
+                                            const padding = '='.repeat((4 - base64String.length % 4) % 4);
+                                            const base64 = (base64String + padding)
+                                                .replace(/-/g, '+')
+                                                .replace(/_/g, '/');
+                                            const rawData = window.atob(base64);
+                                            const outputArray = new Uint8Array(rawData.length);
+                                            for (let i = 0; i < rawData.length; ++i) {
+                                                outputArray[i] = rawData.charCodeAt(i);
+                                            }
+                                            return outputArray;
+                                        };
+
+                                        // Subscribe to push
+                                        const subscription = await reg.pushManager.subscribe({
+                                            userVisibleOnly: true,
+                                            applicationServerKey: urlBase64ToUint8Array(vapidData.publicKey)
+                                        });
+
+                                        // Send subscription to server
+                                        await fetch('/push_subscribe', {
+                                            method: 'POST',
+                                            headers: {'Content-Type': 'application/json'},
+                                            body: JSON.stringify(subscription.toJSON())
+                                        });
+
+                                        console.log('Push notifications enabled!');
+                                    }
+                                } else {
+                                    console.log('Already subscribed to push notifications');
+                                }
+                            }
+                        } catch (err) {
+                            console.log('Push setup error:', err);
+                        }
+                    }
+                })
                 .catch(err => console.log('SW registration failed:', err));
         }
 
