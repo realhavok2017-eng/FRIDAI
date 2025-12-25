@@ -212,3 +212,41 @@ curl http://localhost:5000/health
 - "Don't ever go backward"
 - "Build it right" - no half measures
 - FRIDAI should have FULL capabilities, not limited versions
+
+---
+
+## Running FRIDAI (Production Setup)
+
+### Quick Start
+Double-click `start_all.bat` - launches everything and runs in background.
+
+### What Gets Started
+1. **Cloudflare Tunnel** - Makes FRIDAI accessible at https://fridai.fridai.me
+2. **Flask Backend** (Python 3.14) - FRIDAI's brain on localhost:5000
+3. **Discord Bot** (Python 3.12) - Voice I/O in Discord
+
+### Manual Start Commands
+```bash
+# Cloudflare tunnel
+"C:\Program Files (x86)\cloudflared\cloudflared.exe" tunnel run fridai
+
+# Flask backend (Python 3.14)
+cd C:\Users\Owner\VoiceClaude && C:\Python314\python.exe app.py
+
+# Discord bot (Python 3.12)
+C:\Users\Owner\VoiceClaude\discord_venv\Scripts\python.exe discord_bot.py
+```
+
+### Stopping FRIDAI
+Open Task Manager → End all `python.exe` and `cloudflared.exe` processes
+
+### URLs
+- **Local**: http://localhost:5000
+- **Public**: https://fridai.fridai.me
+- **Discord**: Use /summon to bring FRIDAI to voice
+
+### Important Files for Startup
+- `start_all.bat` - Launches all services
+- `start_discord.bat` - Launches just Discord bot
+- `app.py` - Flask backend (brain)
+- `discord_bot.py` - Discord integration
