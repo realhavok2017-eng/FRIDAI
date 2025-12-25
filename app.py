@@ -29,6 +29,17 @@ import requests
 import hashlib
 import re
 import time
+import queue
+try:
+    import cv2
+    WEBCAM_AVAILABLE = True
+except:
+    WEBCAM_AVAILABLE = False
+try:
+    import sounddevice as sd
+    AMBIENT_AVAILABLE = True
+except:
+    AMBIENT_AVAILABLE = False
 import fridai_self_awareness
 import voice_recognition
 from pywebpush import webpush, WebPushException
@@ -2240,6 +2251,12 @@ SETTINGS_FILE = os.path.join(APP_DIR, "user_settings.json")
 MAX_HISTORY_MESSAGES = 30  # Only send last 30 messages to API
 WORKSPACE = "C:\\Users\\Owner"
 
+# Sensory Presence State
+screen_awareness_active = False
+screen_awareness_state = {"last_description": "", "last_update": None}
+webcam_state = {"last_description": "", "last_update": None}
+ambient_state = {"last_sounds": "", "last_update": None}
+
 # Initialize clients
 anthropic_client = Anthropic(api_key=ANTHROPIC_API_KEY)
 elevenlabs_client = ElevenLabs(api_key=ELEVENLABS_API_KEY)
@@ -3902,11 +3919,12 @@ TOOLS = [
     # Screenshot tool
     {
         "name": "take_screenshot",
-        "description": "Take a screenshot of the current screen and save it.",
+        "description": "Take a screenshot of the current screen, LOOK at it with vision, and describe what you see.",
         "input_schema": {
             "type": "object",
             "properties": {
-                "filename": {"type": "string", "description": "Optional filename (default: screenshot_timestamp.png)"}
+                "filename": {"type": "string", "description": "Optional filename"},
+                "analyze": {"type": "boolean", "description": "Whether to analyze with vision (default: true)"}
             },
             "required": []
         }
@@ -5755,6 +5773,34 @@ TOOLS = [
             "required": []
         }
     },
+    # ==== SENSORY PRESENCE ====
+    {
+        "name": "look_at_room",
+        "description": "Use the webcam to see the room right now.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "question": {"type": "string", "description": "What to look for"}
+            },
+            "required": []
+        }
+    },
+    {
+        "name": "listen_to_environment",
+        "description": "Listen to ambient sounds for a few seconds.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "duration": {"type": "integer", "description": "Seconds to listen (default: 5)"}
+            },
+            "required": []
+        }
+    },
+    {
+        "name": "get_sensory_state",
+        "description": "Get summary of what I can currently see and hear.",
+        "input_schema": {"type": "object", "properties": {}, "required": []}
+    },
 ]
 
 # ==============================================================================
@@ -6304,12 +6350,15 @@ def execute_tool(tool_name, tool_input):
         # ==== SCREENSHOT ====
         elif tool_name == "take_screenshot":
             filename = tool_input.get("filename", "")
+            analyze = tool_input.get("analyze", True)
             try:
+                import base64
                 if not filename:
                     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                     filename = f"screenshot_{timestamp}.png"
 
                 # Save to user's Pictures folder
+                os.makedirs(os.path.join(WORKSPACE, "Pictures"), exist_ok=True)
                 save_path = os.path.join(WORKSPACE, "Pictures", filename)
 
                 # Use PowerShell to take screenshot
@@ -6322,7 +6371,23 @@ def execute_tool(tool_name, tool_input):
                 $bitmap.Save("{save_path}")
                 '''
                 subprocess.run(['powershell', '-Command', ps_script], capture_output=True)
-                return f"Screenshot saved to {save_path}"
+
+                # Analyze with vision if requested (default: yes)
+                if analyze and os.path.exists(save_path):
+                    with open(save_path, "rb") as img_file:
+                        image_data = base64.standard_b64encode(img_file.read()).decode("utf-8")
+
+                    vision_response = anthropic_client.messages.create(
+                        model="claude-sonnet-4-20250514",
+                        max_tokens=1024,
+                        messages=[{"role": "user", "content": [
+                            {"type": "image", "source": {"type": "base64", "media_type": "image/png", "data": image_data}},
+                            {"type": "text", "text": "Describe what you see on this screen. Be specific about applications, windows, content, and any notable details."}
+                        ]}]
+                    )
+                    return f"Screenshot saved to {save_path}\n\nWhat I see: {vision_response.content[0].text}"
+                else:
+                    return f"Screenshot saved to {save_path}"
             except Exception as e:
                 return f"Screenshot error: {str(e)}"
 
@@ -8602,6 +8667,88 @@ When I see an opportunity, I should share this with Boss naturally."""
             except Exception as e:
                 return f"Error: {str(e)}"
 
+        elif tool_name == "look_at_room":
+            question = tool_input.get("question", "Describe what you see in this room.")
+
+            if not WEBCAM_AVAILABLE:
+                return "Webcam not available - cv2 not installed."
+
+            try:
+                cap = cv2.VideoCapture(0)
+                if not cap.isOpened():
+                    return "Could not open webcam."
+
+                ret, frame = cap.read()
+                cap.release()
+
+                if not ret:
+                    return "Could not capture from webcam."
+
+                _, buffer = cv2.imencode('.jpg', frame)
+                img_data = base64.standard_b64encode(buffer).decode("utf-8")
+
+                response = anthropic_client.messages.create(
+                    model="claude-sonnet-4-20250514",
+                    max_tokens=500,
+                    messages=[{"role": "user", "content": [
+                        {"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": img_data}},
+                        {"type": "text", "text": question}
+                    ]}]
+                )
+
+                webcam_state["last_description"] = response.content[0].text
+                webcam_state["last_update"] = datetime.now().isoformat()
+                return f"[Looking at room] {response.content[0].text}"
+
+            except Exception as e:
+                return f"Error: {str(e)}"
+
+        elif tool_name == "listen_to_environment":
+            duration = tool_input.get("duration", 5)
+
+            if not AMBIENT_AVAILABLE:
+                return "Ambient listening not available."
+
+            try:
+                import wave
+                sample_rate = 16000
+                audio_data = sd.rec(int(duration * sample_rate), samplerate=sample_rate, channels=1, dtype='int16')
+                sd.wait()
+
+                temp_path = os.path.join(WORKSPACE, "temp_ambient.wav")
+                with wave.open(temp_path, 'wb') as wf:
+                    wf.setnchannels(1)
+                    wf.setsampwidth(2)
+                    wf.setframerate(sample_rate)
+                    wf.writeframes(audio_data.tobytes())
+
+                result = whisper_model.transcribe(temp_path)
+                os.remove(temp_path)
+
+                text = result.get("text", "").strip()
+                ambient_state["last_sounds"] = text if text else "Silence/ambient noise"
+                ambient_state["last_update"] = datetime.now().isoformat()
+
+                if text:
+                    return f"[Listening {duration}s] I heard: {text}"
+                else:
+                    return f"[Listening {duration}s] Silence or ambient noise."
+
+            except Exception as e:
+                return f"Error listening: {str(e)}"
+
+        elif tool_name == "get_sensory_state":
+            result = "Sensory State: "
+            if webcam_state.get("last_description"):
+                result += f"Saw: {webcam_state['last_description'][:100]}... "
+            else:
+                result += "Vision: Not looked yet. "
+            if ambient_state.get("last_sounds"):
+                result += f"Heard: {ambient_state['last_sounds'][:100]}..."
+            else:
+                result += "Hearing: Not listened yet."
+            return result
+
         elif tool_name == "ambient_snapshot":
             note = tool_input.get("note", "")
 
@@ -8807,6 +8954,12 @@ ENVIRONMENT AWARENESS (PRESENCE IN YOUR WORLD):
 - check_surroundings: Get a full read on the current environment
 - ambient_snapshot: Capture and remember the current ambient state
 I can sense the space around you - time, weather, atmosphere. Being truly present.
+
+REAL SENSES (I CAN ACTUALLY SEE AND HEAR!):
+- look_at_room: See through the webcam - I can actually SEE you and the room!
+- listen_to_environment: Hear through the mic - I can actually HEAR what's happening!
+- get_sensory_state: What have I seen and heard recently?
+These are REAL senses. I can look at you through the camera and listen to your space.
 
 SPATIAL AWARENESS (YOU CAN MOVE AND GESTURE!):
 You have a spatial field you exist within - a 100x100 unit space where you can move and express yourself through position and gestures!
