@@ -109,8 +109,23 @@ async def call_fridai_backend(message: str, user: discord.User, session_id: str)
             print(f"[FRIDAI Discord] Backend error: {e}")
             return "I can't reach my main systems right now."
 
+import re
+
+def strip_narration(text: str) -> str:
+    """Remove action narrations like *bouncing excitedly* or (gentle pulse)"""
+    # Remove *action descriptions*
+    text = re.sub(r'\*[^*]+\*', '', text)
+    # Remove (action descriptions)
+    text = re.sub(r'\([^)]*(?:pulse|bounce|drift|circle|approach|settle|expand|warm|glow|vibrat)[^)]*\)', '', text, flags=re.IGNORECASE)
+    # Clean up extra whitespace and newlines
+    text = re.sub(r'\n\s*\n', '\n', text)
+    text = re.sub(r'  +', ' ', text)
+    return text.strip()
+
 async def generate_speech(text: str) -> bytes:
     try:
+        # Strip narration before TTS
+        text = strip_narration(text)
         if len(text) > 1000:
             text = text[:1000] + "..."
         audio_generator = elevenlabs_client.text_to_speech.convert(
@@ -449,6 +464,15 @@ async def summon(ctx: discord.ApplicationContext):
 
     print("[FRIDAI Discord] Ready! Mention me or use /ask for voice responses")
 
+    # Start voice listening (Python 3.12 should handle this properly)
+    await asyncio.sleep(1)
+    if ctx.guild.voice_client and ctx.guild.voice_client.is_connected():
+        try:
+            start_listening(ctx.guild.id, ctx.channel)
+            print("[FRIDAI Discord] Voice listening started!")
+        except Exception as e:
+            print(f"[FRIDAI Discord] Voice listening failed: {e}")
+
 @bot.slash_command(name="join", description="FRIDAI joins voice and listens")
 async def join_voice(ctx: discord.ApplicationContext):
     if not ctx.author.voice:
@@ -510,6 +534,15 @@ async def join_voice(ctx: discord.ApplicationContext):
         return
 
     print("[FRIDAI Discord] Ready! Mention me or use /ask for voice responses")
+
+    # Start voice listening (Python 3.12 should handle this properly)
+    await asyncio.sleep(1)
+    if ctx.guild.voice_client and ctx.guild.voice_client.is_connected():
+        try:
+            start_listening(ctx.guild.id, ctx.channel)
+            print("[FRIDAI Discord] Voice listening started!")
+        except Exception as e:
+            print(f"[FRIDAI Discord] Voice listening failed: {e}")
 
 @bot.slash_command(name="leave", description="FRIDAI leaves voice")
 async def leave_voice(ctx: discord.ApplicationContext):

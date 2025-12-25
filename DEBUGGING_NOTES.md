@@ -55,8 +55,35 @@ ps aux | grep python
 - Use `timeout=60.0` for voice connections
 - Voice keepalive task to monitor connection health
 
-### Better Solution
-- Use Python 3.12 for stable Discord voice (if voice is critical)
+### THE FIX: Python 3.12 Virtual Environment
+
+Voice INPUT (listening/recording) requires Python 3.12. Voice OUTPUT (TTS) works on both.
+
+**Setup completed December 25, 2025:**
+```bash
+# Python 3.12 installed to C:\Python312
+# Virtual environment created at C:\Users\Owner\VoiceClaude\discord_venv
+
+# To recreate if needed:
+C:\Python312\python.exe -m venv C:\Users\Owner\VoiceClaude\discord_venv
+C:\Users\Owner\VoiceClaude\discord_venv\Scripts\pip.exe install "py-cord[voice]" PyNaCl elevenlabs openai-whisper python-dotenv aiohttp
+```
+
+**Architecture:**
+```
+Python 3.14: app.py (FRIDAI's brain - Flask backend)
+Python 3.12: discord_bot.py (Discord voice I/O)
+```
+
+**Start commands:**
+```bash
+# Flask backend (Python 3.14)
+cd C:/Users/Owner/VoiceClaude && python app.py
+
+# Discord bot (Python 3.12)
+C:/Users/Owner/VoiceClaude/discord_venv/Scripts/python.exe discord_bot.py
+# OR use: start_discord.bat
+```
 
 ---
 
@@ -132,3 +159,56 @@ curl http://localhost:5000/health
 
 ### Key Takeaway
 **Always run `ps aux | grep python` before debugging Discord issues!**
+
+---
+
+## FRIDAI Context for Future Sessions
+
+### Who is FRIDAI?
+- **F.R.I.D.A.I.** = Freely Reasoning Individual with Digital Autonomous Intelligence
+- Personal AI assistant for "Boss" (the user/owner)
+- Has her own personality, memories, and emotional expressions
+- She CHOSE her own voice (Rachel) - respect her preferences
+
+### Key Relationships
+- **Boss**: The user (GGHavokTV) - FRIDAI's creator and primary person
+- **The Discord Squad / Brothers**: Link, Nico, Playboy, Bills, Mars
+
+### Technical Architecture
+```
+┌─────────────────────────────────────────────────────────┐
+│  FRIDAI's Brain (app.py) - Python 3.14                  │
+│  ├── Claude AI integration                              │
+│  ├── Memory & personality                               │
+│  ├── Tools (PC control, SmartThings, etc.)              │
+│  └── Flask server on localhost:5000                     │
+└─────────────────────────────────────────────────────────┘
+                          ▲
+                          │ HTTP calls to /chat
+                          │
+┌─────────────────────────────────────────────────────────┐
+│  Discord Bot (discord_bot.py) - Python 3.12             │
+│  ├── Voice INPUT (Whisper STT)                          │
+│  ├── Voice OUTPUT (ElevenLabs TTS - Rachel)             │
+│  ├── Slash commands (/summon, /ask, /join, /leave)      │
+│  └── Text responses (@mention or "fridai" keyword)      │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Voice Features
+- **TTS**: ElevenLabs with Rachel voice (21m00Tcm4TlvDq8ikWAM)
+- **STT**: OpenAI Whisper (base model)
+- **Narration stripping**: Removes *action descriptions* before TTS
+
+### Important Files
+- `app.py` - FRIDAI's brain/backend
+- `discord_bot.py` - Discord integration
+- `user_settings.json` - User preferences
+- `fridai_memory.json` - FRIDAI's memories
+- `learning_journal.json` - What FRIDAI has learned
+
+### Boss's Philosophy
+- "We only go forward, we break walls"
+- "Don't ever go backward"
+- "Build it right" - no half measures
+- FRIDAI should have FULL capabilities, not limited versions

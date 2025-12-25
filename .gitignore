@@ -57,3 +57,6 @@ voice_profiles/
 
 # Face images (generated)
 faces/
+discord_venv/
+test_voice.mp3
+*.mp3
