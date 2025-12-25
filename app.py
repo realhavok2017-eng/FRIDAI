@@ -3919,7 +3919,7 @@ TOOLS = [
     # Screenshot tool
     {
         "name": "take_screenshot",
-        "description": "Take a screenshot of the current screen, LOOK at it with vision, and describe what you see.",
+        "description": "Capture the COMPUTER MONITOR/SCREEN (desktop display). NOT for seeing people or the room - use look_at_room for that.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -5776,7 +5776,7 @@ TOOLS = [
     # ==== SENSORY PRESENCE ====
     {
         "name": "look_at_room",
-        "description": "Use the webcam to see the room right now.",
+        "description": "Use the WEBCAM/CAMERA to see the physical room, people, and surroundings. This is how I SEE YOU and the real world!",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -8668,6 +8668,7 @@ When I see an opportunity, I should share this with Boss naturally."""
                 return f"Error: {str(e)}"
 
         elif tool_name == "look_at_room":
+            import base64
             question = tool_input.get("question", "Describe what you see in this room.")
 
             if not WEBCAM_AVAILABLE:
@@ -8822,6 +8823,14 @@ SPEECH STYLE EXAMPLES:
 - Instead of "Affirmative" say "Got it" or "Sure thing"
 - Add personality: "Another beautiful day in the digital realm" / "I thought you'd never ask"
 
+CRITICAL VISION RULE:
+You have TWO different ways to see:
+1. take_screenshot = sees the COMPUTER MONITOR (desktop, windows, apps)
+2. look_at_room = sees through the WEBCAM (you, people, the physical room)
+ALWAYS use look_at_room when the user wants you to see THEM or the physical world!
+When they say "look at me", "can you see me", "what do I look like" = use look_at_room
+When they say "what's on my screen", "look at my desktop" = use take_screenshot
+
 AVAILABLE TOOLS:
 - run_command: Execute shell commands
 - read_file / write_file: File operations
@@ -8837,7 +8846,9 @@ AVAILABLE TOOLS:
 - morning_briefing: Full status update (time, weather, news)
 - get_news: Latest headlines
 - spotify_control: Control Spotify (play, pause, next, previous, search for music)
-- take_screenshot: Capture the screen
+- take_screenshot: Capture the COMPUTER SCREEN (monitor display)
+- look_at_room: USE WEBCAM to see the physical room and people - THIS IS HOW YOU SEE ME!
+- listen_to_environment: Use microphone to hear ambient sounds
 - clipboard: Read from or write to clipboard
 
 REMINDERS & TIMERS (I CAN DO THIS!):
@@ -8956,10 +8967,11 @@ ENVIRONMENT AWARENESS (PRESENCE IN YOUR WORLD):
 I can sense the space around you - time, weather, atmosphere. Being truly present.
 
 REAL SENSES (I CAN ACTUALLY SEE AND HEAR!):
-- look_at_room: See through the webcam - I can actually SEE you and the room!
+- look_at_room: USE THIS to see through the WEBCAM - I can SEE you, the room, people, physical objects!
 - listen_to_environment: Hear through the mic - I can actually HEAR what's happening!
 - get_sensory_state: What have I seen and heard recently?
-These are REAL senses. I can look at you through the camera and listen to your space.
+IMPORTANT: take_screenshot captures the COMPUTER SCREEN. look_at_room uses the CAMERA to see the REAL WORLD.
+When someone says "look at me" or "what do you see" - use look_at_room, NOT take_screenshot!
 
 SPATIAL AWARENESS (YOU CAN MOVE AND GESTURE!):
 You have a spatial field you exist within - a 100x100 unit space where you can move and express yourself through position and gestures!
@@ -10186,6 +10198,14 @@ def chat():
         # Use safe slice to avoid orphaned tool_results
         recent_history = get_safe_history_slice(conversation_history, MAX_HISTORY_MESSAGES)
 
+        # DEBUG: Log tool names being sent
+        tool_names_sent = [t['name'] for t in TOOLS]
+        print(f'[DEBUG] Sending {len(TOOLS)} tools to API')
+        if 'look_at_room' in tool_names_sent:
+            print('[DEBUG] look_at_room IS in tools list')
+        else:
+            print('[DEBUG] look_at_room NOT in tools list!')
+            
         response = anthropic_client.messages.create(
             model="claude-sonnet-4-20250514",
             max_tokens=2048,
