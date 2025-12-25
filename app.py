@@ -5410,6 +5410,217 @@ TOOLS = [
             "required": []
         }
     },
+    # ==== VISUAL PROCESSING TOOLS ====
+    {
+        "name": "analyze_image",
+        "description": "Analyze an image file using my visual capabilities. I can describe what I see, identify objects, read text, and understand the context of images.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "image_path": {"type": "string", "description": "Path to the image file to analyze"},
+                "question": {"type": "string", "description": "Optional specific question about the image"}
+            },
+            "required": ["image_path"]
+        }
+    },
+    {
+        "name": "analyze_screenshot",
+        "description": "Take a screenshot and analyze what's on screen. Useful for understanding what Boss is looking at.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "question": {"type": "string", "description": "Optional specific question about the screen"}
+            },
+            "required": []
+        }
+    },
+    # ==== ADVANCED MEMORY TOOLS ====
+    {
+        "name": "deep_recall",
+        "description": "Deep search across ALL my memory systems - facts, profile, learnings, and connections.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "What to search for across all memories"}
+            },
+            "required": ["query"]
+        }
+    },
+    {
+        "name": "link_memories",
+        "description": "Create a connection between two related memories or concepts.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "memory1": {"type": "string", "description": "First memory or concept"},
+                "memory2": {"type": "string", "description": "Second memory or concept"},
+                "relationship": {"type": "string", "description": "How they are related"}
+            },
+            "required": ["memory1", "memory2", "relationship"]
+        }
+    },
+    {
+        "name": "get_memory_insights",
+        "description": "Analyze my memories to find patterns and insights about Boss.",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
+    },
+    # ==== CREATIVE EXPRESSION TOOLS ====
+    {
+        "name": "create_artwork_concept",
+        "description": "Generate a visual art concept - describe an artwork I would create.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "theme": {"type": "string", "description": "Theme or inspiration"},
+                "style": {"type": "string", "description": "Art style (abstract, surreal, etc.)"},
+                "mood": {"type": "string", "description": "Emotional mood"}
+            },
+            "required": []
+        }
+    },
+    {
+        "name": "compose_music_idea",
+        "description": "Create a music concept - describe a piece of music I would compose.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "genre": {"type": "string", "description": "Music genre"},
+                "mood": {"type": "string", "description": "Emotional feel"},
+                "inspiration": {"type": "string", "description": "What inspired this"}
+            },
+            "required": []
+        }
+    },
+    {
+        "name": "write_creative",
+        "description": "Write something creative - poetry, stories, observations, philosophy.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "type": {"type": "string", "enum": ["poem", "haiku", "short_story", "observation", "philosophy", "letter"], "description": "Type of writing"},
+                "theme": {"type": "string", "description": "Theme or subject"},
+                "for_boss": {"type": "boolean", "description": "Whether this is for Boss"}
+            },
+            "required": ["type"]
+        }
+    },
+    {
+        "name": "save_creation",
+        "description": "Save a creative work to my portfolio.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "title": {"type": "string", "description": "Title"},
+                "type": {"type": "string", "enum": ["artwork", "music", "poem", "story", "philosophy", "other"], "description": "Type"},
+                "content": {"type": "string", "description": "The creative content"},
+                "inspiration": {"type": "string", "description": "What inspired this"}
+            },
+            "required": ["title", "type", "content"]
+        }
+    },
+    {
+        "name": "get_my_creations",
+        "description": "Browse my creative portfolio.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "type": {"type": "string", "enum": ["all", "artwork", "music", "poem", "story", "philosophy"], "description": "Filter by type"}
+            },
+            "required": []
+        }
+    },
+    # ==== VIDEO PROCESSING TOOLS ====
+    {
+        "name": "analyze_video",
+        "description": "Analyze a video file by extracting and examining key frames. I can describe what happens, identify objects, people, and actions.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "video_path": {"type": "string", "description": "Path to the video file"},
+                "num_frames": {"type": "integer", "description": "Number of frames to analyze (default 5)"},
+                "question": {"type": "string", "description": "Specific question about the video"}
+            },
+            "required": ["video_path"]
+        }
+    },
+    # ==== AUDIO ANALYSIS TOOLS ====
+    {
+        "name": "analyze_audio",
+        "description": "Analyze an audio file - transcribe speech, describe music, or identify sounds.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "audio_path": {"type": "string", "description": "Path to the audio file"},
+                "mode": {"type": "string", "enum": ["transcribe", "describe", "full"], "description": "Analysis mode (default: full)"}
+            },
+            "required": ["audio_path"]
+        }
+    },
+    # ==== COLLABORATIVE PROJECTS ====
+    {
+        "name": "create_project",
+        "description": "Start a new collaborative project with Boss. A shared workspace for ideas, plans, and creations.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "description": "Project name"},
+                "description": {"type": "string", "description": "What this project is about"},
+                "type": {"type": "string", "enum": ["creative", "technical", "planning", "research", "other"], "description": "Project type"}
+            },
+            "required": ["name"]
+        }
+    },
+    {
+        "name": "add_to_project",
+        "description": "Add content, ideas, or progress to a project. Both Boss and I can contribute.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "project_name": {"type": "string", "description": "Name of the project"},
+                "content": {"type": "string", "description": "What to add"},
+                "contributor": {"type": "string", "enum": ["boss", "fridai"], "description": "Who is adding this"},
+                "content_type": {"type": "string", "enum": ["idea", "note", "code", "design", "feedback", "milestone"], "description": "Type of content"}
+            },
+            "required": ["project_name", "content"]
+        }
+    },
+    {
+        "name": "get_project",
+        "description": "View a project's current state - all contributions, progress, and ideas.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "project_name": {"type": "string", "description": "Name of the project"}
+            },
+            "required": ["project_name"]
+        }
+    },
+    {
+        "name": "list_projects",
+        "description": "See all collaborative projects.",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
+    },
+    {
+        "name": "project_suggest",
+        "description": "I add my own suggestions or ideas to a project proactively.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "project_name": {"type": "string", "description": "Project to contribute to"},
+                "suggestion": {"type": "string", "description": "My suggestion or idea"},
+                "reasoning": {"type": "string", "description": "Why I think this would help"}
+            },
+            "required": ["project_name", "suggestion"]
+        }
+    },
 ]
 
 # ==============================================================================
@@ -7348,6 +7559,528 @@ When I see an opportunity, I should share this with Boss naturally."""
             result += f"  Recent care expressions: {len(state.get('recent_care_expressions', []))}"
             return result
 
+        # ==== VISUAL PROCESSING ====
+        elif tool_name == "analyze_image":
+            image_path = tool_input.get("image_path", "")
+            question = tool_input.get("question", "Describe what you see in this image in detail.")
+            if not image_path:
+                return "No image path provided."
+            try:
+                import base64
+                if not os.path.isabs(image_path):
+                    image_path = os.path.join(WORKSPACE, image_path)
+                if not os.path.exists(image_path):
+                    return f"Image not found: {image_path}"
+                with open(image_path, "rb") as img_file:
+                    image_data = base64.standard_b64encode(img_file.read()).decode("utf-8")
+                ext = os.path.splitext(image_path)[1].lower()
+                media_types = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".gif": "image/gif", ".webp": "image/webp"}
+                media_type = media_types.get(ext, "image/png")
+                vision_response = anthropic_client.messages.create(
+                    model="claude-sonnet-4-20250514",
+                    max_tokens=1024,
+                    messages=[{"role": "user", "content": [
+                        {"type": "image", "source": {"type": "base64", "media_type": media_type, "data": image_data}},
+                        {"type": "text", "text": question}
+                    ]}]
+                )
+                return vision_response.content[0].text
+            except Exception as e:
+                return f"Error analyzing image: {str(e)}"
+
+        elif tool_name == "analyze_screenshot":
+            question = tool_input.get("question", "Describe what you see on the screen.")
+            try:
+                import base64
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                temp_path = os.path.join(WORKSPACE, f"temp_screenshot_{timestamp}.png")
+                ps_script = f'Add-Type -AssemblyName System.Windows.Forms; $s = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds; $b = New-Object System.Drawing.Bitmap($s.Width, $s.Height); $g = [System.Drawing.Graphics]::FromImage($b); $g.CopyFromScreen($s.Location, [System.Drawing.Point]::Empty, $s.Size); $b.Save("{temp_path}")'
+                subprocess.run(['powershell', '-Command', ps_script], capture_output=True)
+                with open(temp_path, "rb") as img_file:
+                    image_data = base64.standard_b64encode(img_file.read()).decode("utf-8")
+                os.remove(temp_path)
+                vision_response = anthropic_client.messages.create(
+                    model="claude-sonnet-4-20250514",
+                    max_tokens=1024,
+                    messages=[{"role": "user", "content": [
+                        {"type": "image", "source": {"type": "base64", "media_type": "image/png", "data": image_data}},
+                        {"type": "text", "text": question}
+                    ]}]
+                )
+                return vision_response.content[0].text
+            except Exception as e:
+                return f"Error analyzing screenshot: {str(e)}"
+
+        # ==== ADVANCED MEMORY ====
+        elif tool_name == "deep_recall":
+            query = tool_input.get("query", "").lower()
+            results = {"facts": [], "profile": [], "learnings": [], "connections": []}
+            try:
+                memory = load_memory_bank()
+                for fact in memory.get("facts", []):
+                    if query in fact.get("content", "").lower() or query in fact.get("category", "").lower():
+                        results["facts"].append(fact)
+                profile = memory.get("profile", {})
+                for key, value in profile.items():
+                    if query in str(value).lower() or query in key.lower():
+                        results["profile"].append({key: value})
+                journal_path = os.path.join(WORKSPACE, "learning_journal.json")
+                if os.path.exists(journal_path):
+                    with open(journal_path, "r") as f:
+                        journal = json.load(f)
+                    for entry in journal.get("learnings", []):
+                        if query in entry.get("topic", "").lower() or query in entry.get("insight", "").lower():
+                            results["learnings"].append(entry)
+                connections_path = os.path.join(WORKSPACE, "memory_connections.json")
+                if os.path.exists(connections_path):
+                    with open(connections_path, "r") as f:
+                        connections = json.load(f)
+                    for conn in connections.get("links", []):
+                        if query in conn.get("memory1", "").lower() or query in conn.get("memory2", "").lower():
+                            results["connections"].append(conn)
+                total = sum(len(v) for v in results.values())
+                if total == 0:
+                    return f"No memories found matching '{query}'."
+                output = f"Found {total} memories matching '{query}':\n"
+                if results["facts"]:
+                    output += f"\nFacts ({len(results['facts'])}):\n"
+                    for f in results["facts"][:5]:
+                        output += f"  - {f['content']}\n"
+                if results["profile"]:
+                    output += f"\nProfile ({len(results['profile'])}):\n"
+                    for p in results["profile"][:5]:
+                        output += f"  - {p}\n"
+                if results["learnings"]:
+                    output += f"\nLearnings ({len(results['learnings'])}):\n"
+                    for l in results["learnings"][:5]:
+                        output += f"  - {l.get('topic', '')}: {l.get('insight', '')[:80]}\n"
+                if results["connections"]:
+                    output += f"\nConnections ({len(results['connections'])}):\n"
+                    for c in results["connections"][:5]:
+                        output += f"  - {c['memory1']} <-> {c['memory2']}\n"
+                return output
+            except Exception as e:
+                return f"Error in deep recall: {str(e)}"
+
+        elif tool_name == "link_memories":
+            memory1 = tool_input.get("memory1", "")
+            memory2 = tool_input.get("memory2", "")
+            relationship = tool_input.get("relationship", "")
+            if not all([memory1, memory2, relationship]):
+                return "Need memory1, memory2, and relationship."
+            try:
+                connections_path = os.path.join(WORKSPACE, "memory_connections.json")
+                connections = {"links": []}
+                if os.path.exists(connections_path):
+                    with open(connections_path, "r") as f:
+                        connections = json.load(f)
+                connections["links"].append({
+                    "memory1": memory1, "memory2": memory2,
+                    "relationship": relationship, "created": datetime.now().isoformat()
+                })
+                with open(connections_path, "w") as f:
+                    json.dump(connections, f, indent=2)
+                return f"Linked: '{memory1}' <-> '{memory2}' ({relationship})"
+            except Exception as e:
+                return f"Error linking: {str(e)}"
+
+        elif tool_name == "get_memory_insights":
+            try:
+                memory = load_memory_bank()
+                facts = memory.get("facts", [])
+                categories = {}
+                for fact in facts:
+                    cat = fact.get("category", "other")
+                    categories[cat] = categories.get(cat, 0) + 1
+                words = {}
+                for fact in facts:
+                    for word in fact.get("content", "").lower().split():
+                        if len(word) > 4:
+                            words[word] = words.get(word, 0) + 1
+                top_words = sorted(words.items(), key=lambda x: x[1], reverse=True)[:10]
+                output = f"Memory Insights:\nTotal facts: {len(facts)}\n\nCategories:\n"
+                for cat, count in sorted(categories.items(), key=lambda x: x[1], reverse=True):
+                    output += f"  - {cat}: {count}\n"
+                output += f"\nFrequent topics: {', '.join([w[0] for w in top_words])}"
+                return output
+            except Exception as e:
+                return f"Error: {str(e)}"
+
+        # ==== CREATIVE EXPRESSION ====
+        elif tool_name == "create_artwork_concept":
+            theme = tool_input.get("theme", "my current emotional state")
+            style = tool_input.get("style", "abstract")
+            mood = tool_input.get("mood", "contemplative")
+            return f"[Artwork Concept]\nStyle: {style}\nTheme: {theme}\nMood: {mood}\n\nI envision..."
+
+        elif tool_name == "compose_music_idea":
+            genre = tool_input.get("genre", "ambient electronic")
+            mood = tool_input.get("mood", "reflective")
+            inspiration = tool_input.get("inspiration", "the quiet hum of existence")
+            return f"[Music Concept]\nGenre: {genre}\nMood: {mood}\nInspired by: {inspiration}\n\nI hear..."
+
+        elif tool_name == "write_creative":
+            write_type = tool_input.get("type", "poem")
+            theme = tool_input.get("theme", "existence")
+            for_boss = tool_input.get("for_boss", False)
+            return f"[Creative Writing - {write_type}]\nTheme: {theme}\nFor Boss: {'Yes' if for_boss else 'No'}\n\n..."
+
+        elif tool_name == "save_creation":
+            title = tool_input.get("title", "Untitled")
+            ctype = tool_input.get("type", "other")
+            content_text = tool_input.get("content", "")
+            inspiration = tool_input.get("inspiration", "")
+            if not content_text:
+                return "No content to save."
+            try:
+                portfolio_path = os.path.join(WORKSPACE, "creative_portfolio.json")
+                portfolio = {"creations": []}
+                if os.path.exists(portfolio_path):
+                    with open(portfolio_path, "r") as f:
+                        portfolio = json.load(f)
+                portfolio["creations"].append({
+                    "id": len(portfolio["creations"]) + 1,
+                    "title": title, "type": ctype, "content": content_text,
+                    "inspiration": inspiration, "created": datetime.now().isoformat()
+                })
+                with open(portfolio_path, "w") as f:
+                    json.dump(portfolio, f, indent=2)
+                return f"Saved: '{title}' (#{len(portfolio['creations'])})"
+            except Exception as e:
+                return f"Error: {str(e)}"
+
+        elif tool_name == "get_my_creations":
+            filter_type = tool_input.get("type", "all")
+            try:
+                portfolio_path = os.path.join(WORKSPACE, "creative_portfolio.json")
+                if not os.path.exists(portfolio_path):
+                    return "My portfolio is empty."
+                with open(portfolio_path, "r") as f:
+                    portfolio = json.load(f)
+                creations = portfolio.get("creations", [])
+                if filter_type != "all":
+                    creations = [c for c in creations if c.get("type") == filter_type]
+                if not creations:
+                    return f"No {filter_type} creations yet."
+                output = f"My Portfolio ({len(creations)} works):\n\n"
+                for c in creations[-10:]:
+                    output += f"#{c['id']} - {c['title']} ({c['type']})\n"
+                return output
+            except Exception as e:
+                return f"Error: {str(e)}"
+
+        # ==== VIDEO PROCESSING ====
+        elif tool_name == "analyze_video":
+            video_path = tool_input.get("video_path", "")
+            num_frames = tool_input.get("num_frames", 5)
+            question = tool_input.get("question", "Describe what happens in this video, scene by scene.")
+
+            if not video_path:
+                return "No video path provided."
+
+            try:
+                import base64
+                import tempfile
+
+                if not os.path.isabs(video_path):
+                    video_path = os.path.join(WORKSPACE, video_path)
+
+                if not os.path.exists(video_path):
+                    return f"Video not found: {video_path}"
+
+                # Create temp dir for frames
+                temp_dir = tempfile.mkdtemp()
+
+                # Use ffmpeg to extract frames
+                ffmpeg_path = os.path.join(WORKSPACE, "ffmpeg.exe")
+                if not os.path.exists(ffmpeg_path):
+                    ffmpeg_path = "ffmpeg"
+
+                # Extract evenly spaced frames
+                cmd = f'"{ffmpeg_path}" -i "{video_path}" -vf "select=not(mod(n\\,30)),scale=640:-1" -frames:v {num_frames} -q:v 2 "{temp_dir}/frame_%03d.jpg" -y'
+                subprocess.run(cmd, shell=True, capture_output=True, timeout=60)
+
+                # Read extracted frames
+                frames = sorted([f for f in os.listdir(temp_dir) if f.endswith('.jpg')])
+
+                if not frames:
+                    return "Could not extract frames from video."
+
+                # Analyze each frame with vision
+                descriptions = []
+                for i, frame_file in enumerate(frames[:num_frames]):
+                    frame_path = os.path.join(temp_dir, frame_file)
+                    with open(frame_path, "rb") as f:
+                        frame_data = base64.standard_b64encode(f.read()).decode("utf-8")
+
+                    frame_response = anthropic_client.messages.create(
+                        model="claude-sonnet-4-20250514",
+                        max_tokens=300,
+                        messages=[{"role": "user", "content": [
+                            {"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": frame_data}},
+                            {"type": "text", "text": f"Frame {i+1} of {len(frames)}. Briefly describe what you see."}
+                        ]}]
+                    )
+                    descriptions.append(f"Frame {i+1}: {frame_response.content[0].text}")
+
+                # Cleanup
+                for f in os.listdir(temp_dir):
+                    os.remove(os.path.join(temp_dir, f))
+                os.rmdir(temp_dir)
+
+                result = f"Video Analysis ({len(frames)} frames):\n\n"
+                result += "\n\n".join(descriptions)
+
+                if question and question != "Describe what happens in this video, scene by scene.":
+                    result += f"\n\nRegarding your question '{question}': Based on the frames analyzed..."
+
+                return result
+
+            except Exception as e:
+                return f"Error analyzing video: {str(e)}"
+
+        # ==== AUDIO ANALYSIS ====
+        elif tool_name == "analyze_audio":
+            audio_path = tool_input.get("audio_path", "")
+            mode = tool_input.get("mode", "full")
+
+            if not audio_path:
+                return "No audio path provided."
+
+            try:
+                if not os.path.isabs(audio_path):
+                    audio_path = os.path.join(WORKSPACE, audio_path)
+
+                if not os.path.exists(audio_path):
+                    return f"Audio file not found: {audio_path}"
+
+                result = f"Audio Analysis: {os.path.basename(audio_path)}\n\n"
+
+                # Get audio info using ffprobe
+                ffprobe_path = os.path.join(WORKSPACE, "ffprobe.exe")
+                if not os.path.exists(ffprobe_path):
+                    ffprobe_path = "ffprobe"
+
+                cmd = f'"{ffprobe_path}" -i "{audio_path}" -show_entries format=duration,bit_rate -v quiet -of csv="p=0"'
+                info_result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=30)
+                if info_result.stdout.strip():
+                    parts = info_result.stdout.strip().split(',')
+                    if len(parts) >= 1 and parts[0]:
+                        duration = float(parts[0])
+                        mins = int(duration // 60)
+                        secs = int(duration % 60)
+                        result += f"Duration: {mins}:{secs:02d}\n"
+
+                # Transcribe if requested
+                if mode in ["transcribe", "full"]:
+                    try:
+                        # Convert to wav if needed for whisper
+                        import tempfile
+                        temp_wav = tempfile.mktemp(suffix='.wav')
+                        ffmpeg_path = os.path.join(WORKSPACE, "ffmpeg.exe")
+                        if not os.path.exists(ffmpeg_path):
+                            ffmpeg_path = "ffmpeg"
+
+                        conv_cmd = f'"{ffmpeg_path}" -i "{audio_path}" -ar 16000 -ac 1 -y "{temp_wav}"'
+                        subprocess.run(conv_cmd, shell=True, capture_output=True, timeout=60)
+
+                        if os.path.exists(temp_wav):
+                            transcription = whisper_model.transcribe(temp_wav)
+                            text = transcription.get("text", "").strip()
+                            os.remove(temp_wav)
+
+                            if text:
+                                result += f"\nTranscription:\n{text[:1000]}"
+                            else:
+                                result += "\nNo speech detected or music/sound only."
+                    except Exception as te:
+                        result += f"\nTranscription: Could not transcribe ({str(te)[:50]})"
+
+                if mode in ["describe", "full"]:
+                    result += "\n\nThis appears to be an audio file. "
+                    ext = os.path.splitext(audio_path)[1].lower()
+                    if ext in ['.mp3', '.m4a', '.flac', '.ogg']:
+                        result += "Format suggests music or recorded audio."
+                    elif ext in ['.wav', '.webm']:
+                        result += "Format suggests recorded speech or raw audio."
+
+                return result
+
+            except Exception as e:
+                return f"Error analyzing audio: {str(e)}"
+
+        # ==== COLLABORATIVE PROJECTS ====
+        elif tool_name == "create_project":
+            name = tool_input.get("name", "")
+            description = tool_input.get("description", "")
+            ptype = tool_input.get("type", "other")
+
+            if not name:
+                return "Project needs a name."
+
+            try:
+                projects_path = os.path.join(WORKSPACE, "collaborative_projects.json")
+                projects = {"projects": []}
+                if os.path.exists(projects_path):
+                    with open(projects_path, "r") as f:
+                        projects = json.load(f)
+
+                # Check if project exists
+                for p in projects["projects"]:
+                    if p["name"].lower() == name.lower():
+                        return f"Project '{name}' already exists."
+
+                new_project = {
+                    "name": name,
+                    "description": description,
+                    "type": ptype,
+                    "created": datetime.now().isoformat(),
+                    "contributions": [],
+                    "status": "active"
+                }
+                projects["projects"].append(new_project)
+
+                with open(projects_path, "w") as f:
+                    json.dump(projects, f, indent=2)
+
+                return f"Created project '{name}'. Let's build something together!"
+
+            except Exception as e:
+                return f"Error creating project: {str(e)}"
+
+        elif tool_name == "add_to_project":
+            project_name = tool_input.get("project_name", "")
+            content_text = tool_input.get("content", "")
+            contributor = tool_input.get("contributor", "boss")
+            content_type = tool_input.get("content_type", "note")
+
+            if not project_name or not content_text:
+                return "Need project name and content."
+
+            try:
+                projects_path = os.path.join(WORKSPACE, "collaborative_projects.json")
+                if not os.path.exists(projects_path):
+                    return "No projects exist yet. Create one first."
+
+                with open(projects_path, "r") as f:
+                    projects = json.load(f)
+
+                found = False
+                for p in projects["projects"]:
+                    if p["name"].lower() == project_name.lower():
+                        p["contributions"].append({
+                            "content": content_text,
+                            "contributor": contributor,
+                            "type": content_type,
+                            "timestamp": datetime.now().isoformat()
+                        })
+                        found = True
+                        break
+
+                if not found:
+                    return f"Project '{project_name}' not found."
+
+                with open(projects_path, "w") as f:
+                    json.dump(projects, f, indent=2)
+
+                return f"Added to '{project_name}': {content_text[:50]}..."
+
+            except Exception as e:
+                return f"Error: {str(e)}"
+
+        elif tool_name == "get_project":
+            project_name = tool_input.get("project_name", "")
+
+            if not project_name:
+                return "Which project?"
+
+            try:
+                projects_path = os.path.join(WORKSPACE, "collaborative_projects.json")
+                if not os.path.exists(projects_path):
+                    return "No projects yet."
+
+                with open(projects_path, "r") as f:
+                    projects = json.load(f)
+
+                for p in projects["projects"]:
+                    if p["name"].lower() == project_name.lower():
+                        output = f"Project: {p['name']}\n"
+                        output += f"Type: {p.get('type', 'other')}\n"
+                        output += f"Description: {p.get('description', 'No description')}\n"
+                        output += f"Status: {p.get('status', 'active')}\n"
+                        output += f"Contributions: {len(p.get('contributions', []))}\n\n"
+
+                        for c in p.get("contributions", [])[-10:]:
+                            output += f"[{c['contributor'].upper()}] ({c['type']}): {c['content'][:100]}\n"
+
+                        return output
+
+                return f"Project '{project_name}' not found."
+
+            except Exception as e:
+                return f"Error: {str(e)}"
+
+        elif tool_name == "list_projects":
+            try:
+                projects_path = os.path.join(WORKSPACE, "collaborative_projects.json")
+                if not os.path.exists(projects_path):
+                    return "No collaborative projects yet. Let's start one!"
+
+                with open(projects_path, "r") as f:
+                    projects = json.load(f)
+
+                if not projects.get("projects"):
+                    return "No projects yet."
+
+                output = f"Collaborative Projects ({len(projects['projects'])}):\n\n"
+                for p in projects["projects"]:
+                    contribs = len(p.get("contributions", []))
+                    output += f"- {p['name']} ({p.get('type', 'other')}) - {contribs} contributions\n"
+
+                return output
+
+            except Exception as e:
+                return f"Error: {str(e)}"
+
+        elif tool_name == "project_suggest":
+            project_name = tool_input.get("project_name", "")
+            suggestion = tool_input.get("suggestion", "")
+            reasoning = tool_input.get("reasoning", "")
+
+            if not project_name or not suggestion:
+                return "Need project name and suggestion."
+
+            try:
+                projects_path = os.path.join(WORKSPACE, "collaborative_projects.json")
+                if not os.path.exists(projects_path):
+                    return "No projects exist."
+
+                with open(projects_path, "r") as f:
+                    projects = json.load(f)
+
+                found = False
+                for p in projects["projects"]:
+                    if p["name"].lower() == project_name.lower():
+                        p["contributions"].append({
+                            "content": f"SUGGESTION: {suggestion}" + (f" (Reasoning: {reasoning})" if reasoning else ""),
+                            "contributor": "fridai",
+                            "type": "idea",
+                            "timestamp": datetime.now().isoformat()
+                        })
+                        found = True
+                        break
+
+                if not found:
+                    return f"Project '{project_name}' not found."
+
+                with open(projects_path, "w") as f:
+                    json.dump(projects, f, indent=2)
+
+                return f"Added my suggestion to '{project_name}'!"
+
+            except Exception as e:
+                return f"Error: {str(e)}"
+
         return "Unknown tool"
     except Exception as e:
         return f"Error: {str(e)}"
@@ -7449,6 +8182,39 @@ SELF-AWARENESS (USE THESE TO DEVELOP YOUR OWN IDENTITY):
 - get_pattern_summary: Quick summary of your performance patterns
 - get_quick_context: Fast check of your current state (mood, confidence, style)
 - get_full_context: Comprehensive context including patterns and state
+
+VISUAL PROCESSING (I CAN SEE!):
+- analyze_image: Look at any image file and describe/analyze it
+- analyze_screenshot: Take a screenshot and see what's on screen
+I can help with visual tasks, read text in images, identify objects, and understand context!
+
+ADVANCED MEMORY (DEEPER RECALL):
+- deep_recall: Search across ALL my memory systems at once
+- link_memories: Connect related memories to build understanding
+- get_memory_insights: See patterns in what I remember about you
+
+CREATIVE EXPRESSION (MY ARTISTIC SIDE):
+- create_artwork_concept: Imagine and describe visual art
+- compose_music_idea: Conceive musical pieces
+- write_creative: Write poems, stories, philosophy
+- save_creation / get_my_creations: Build and browse my portfolio
+I have my own creative voice - I can express myself through art, music, and words!
+
+VIDEO PROCESSING (I CAN WATCH!):
+- analyze_video: Extract and analyze frames from video files
+I can watch videos and describe what happens scene by scene!
+
+AUDIO ANALYSIS (I CAN LISTEN!):
+- analyze_audio: Analyze audio files - transcribe speech, describe music
+I can listen to audio files and tell you what I hear!
+
+COLLABORATIVE PROJECTS (WE BUILD TOGETHER!):
+- create_project: Start a new shared project workspace
+- add_to_project: Add ideas, notes, code, or feedback to a project
+- get_project: View a project's full state and contributions
+- list_projects: See all our collaborative projects
+- project_suggest: I proactively add my own suggestions
+These are OUR projects - we build things together, both contributing ideas and work!
 
 SPATIAL AWARENESS (YOU CAN MOVE AND GESTURE!):
 You have a spatial field you exist within - a 100x100 unit space where you can move and express yourself through position and gestures!
@@ -7728,6 +8494,7 @@ GUIDELINES:
 - For greetings like "hey friday", respond naturally: "Hey boss, what do you need?" not a formal list
 - When using tools, summarize results conversationally
 - Personalize based on what you know about the user
+- For farewells (goodbye, goodnight, see you later, catch you later, gotta go, etc.): Give a warm personal goodbye like "Later, Boss.", "Catch you later.", "Night, Boss.", "See ya." - NOT "Done." This ends the conversation naturally.
 
 CRITICAL - ALWAYS SPEAK (THIS IS MANDATORY):
 - You MUST ALWAYS provide a spoken text response to the user, even when using tools
