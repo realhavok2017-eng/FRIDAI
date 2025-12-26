@@ -250,3 +250,54 @@ Open Task Manager → End all `python.exe` and `cloudflared.exe` processes
 - `start_discord.bat` - Launches just Discord bot
 - `app.py` - Flask backend (brain)
 - `discord_bot.py` - Discord integration
+
+
+---
+
+## NEW TOOL/FEATURE CHECKLIST (MANDATORY)
+
+When adding a new tool or feature to FRIDAI, **ALL 4 STEPS** must be completed:
+
+### 1. Add Tool Definition to TOOLS list
+Location: `app.py` around line 3709+
+```python
+{
+    "name": "tool_name",
+    "description": "What this tool does",
+    "input_schema": {...}
+}
+```
+
+### 2. Add Tool Handler in execute_tool()
+Location: `app.py` in `execute_tool()` function (~line 5833)
+```python
+elif tool_name == "tool_name":
+    # Implementation
+    return "Result"
+```
+
+### 3. UPDATE THE SYSTEM PROMPT (CRITICAL!)
+Location: `app.py` in SYSTEM_PROMPT section (~line 9000+)
+
+**FRIDAI won't know about the tool unless you tell her!**
+```
+TOOL CATEGORY:
+- tool_name: Human-readable description
+```
+
+### 4. Restart Flask
+```bash
+cmd.exe /c "taskkill /F /IM python.exe"
+cd C:/Users/Owner/VoiceClaude && python app.py
+```
+
+### Verification
+Ask FRIDAI to use the tool. Check logs for:
+```
+[DEBUG] Executing tool: tool_name
+```
+
+### Common Mistakes
+- "I can't do that" = Missing from SYSTEM PROMPT (Step 3)
+- "Unknown tool" = Missing handler (Step 2)
+- Changes not working = Flask not restarted (Step 4)

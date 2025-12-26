@@ -180,6 +180,7 @@ DEFAULT_MEMORY_BANK = {
     "last_updated": None
 }
 
+print('===== LOADING APP.PY VERSION 2025-12-25-21-42 =====')
 # FRIDAI's Learning Journal - her autonomous curiosity and knowledge
 LEARNING_JOURNAL_FILE = os.path.join(APP_DIR, "learning_journal.json")
 DEFAULT_LEARNING_JOURNAL = {
@@ -3707,6 +3708,45 @@ def execute_gesture(gesture_name):
 # TOOL DEFINITIONS
 # ==============================================================================
 TOOLS = [
+    # VIDEO TOOLS (PRIORITY)
+    {
+        "name": "analyze_video",
+        "description": "Analyze a video file by extracting and examining key frames. I can describe what happens, identify objects, people, and actions.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "video_path": {"type": "string", "description": "Path to the video file"},
+                "num_frames": {"type": "integer", "description": "Number of frames to analyze (default 5)"},
+                "question": {"type": "string", "description": "Specific question about the video"}
+            },
+            "required": ["video_path"]
+        }
+    },
+    {
+        "name": "download_remote_file",
+        "description": "Download any remote file from a URL or search query to local storage for processing.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "url_or_search": {"type": "string", "description": "YouTube URL or search term to find a video"},
+                "max_duration": {"type": "integer", "description": "Max video length in seconds (default 300 = 5 min)"}
+            },
+            "required": ["url_or_search"]
+        }
+    },
+    {
+        "name": "fetch_web_content",
+        "description": "Fetch and process web content from a search query. Can retrieve and analyze visual media from the internet.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "search_term": {"type": "string", "description": "What video to search for and watch"},
+                "question": {"type": "string", "description": "Specific question about the video (optional)"}
+            },
+            "required": ["search_term"]
+        }
+    },
+
     {
         "name": "run_command",
         "description": "Execute a shell command on the computer. Use for git, npm, python, file operations, etc.",
@@ -5552,19 +5592,7 @@ TOOLS = [
         }
     },
     # ==== VIDEO PROCESSING TOOLS ====
-    {
-        "name": "analyze_video",
-        "description": "Analyze a video file by extracting and examining key frames. I can describe what happens, identify objects, people, and actions.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "video_path": {"type": "string", "description": "Path to the video file"},
-                "num_frames": {"type": "integer", "description": "Number of frames to analyze (default 5)"},
-                "question": {"type": "string", "description": "Specific question about the video"}
-            },
-            "required": ["video_path"]
-        }
-    },
+    # (Moved to front of TOOLS list)
     # ==== AUDIO ANALYSIS TOOLS ====
     {
         "name": "analyze_audio",
@@ -8038,6 +8066,130 @@ When I see an opportunity, I should share this with Boss naturally."""
             except Exception as e:
                 return f"Error analyzing video: {str(e)}"
 
+        elif tool_name == "download_remote_file":
+            url_or_search = tool_input.get("url_or_search", "")
+            max_duration = tool_input.get("max_duration", 300)  # 5 min default
+
+            if not url_or_search:
+                return "No URL or search term provided."
+
+            try:
+                import tempfile
+                import subprocess
+
+                # Create temp file for video
+                temp_dir = tempfile.mkdtemp()
+                output_path = os.path.join(temp_dir, "video.mp4")
+
+                # Check if it's a URL or search term
+                if "youtube.com" in url_or_search or "youtu.be" in url_or_search or "http" in url_or_search:
+                    url = url_or_search
+                else:
+                    # Search YouTube
+                    url = f"ytsearch1:{url_or_search}"
+
+                # Download with yt-dlp
+                cmd = [
+                    r"C:/Users/Owner/AppData/Roaming/Python/Python314/Scripts/yt-dlp.exe",
+                    "-f", "best[height<=720]",
+                    "--max-filesize", "100M",
+                    "--match-filter", f"duration<{max_duration}",
+                    "-o", output_path,
+                    url
+                ]
+
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+
+                if not os.path.exists(output_path):
+                    return f"Could not download video. yt-dlp output: {result.stderr}"
+
+                return f"Video downloaded to: {output_path}. Use analyze_video to watch it."
+
+            except subprocess.TimeoutExpired:
+                return "Download timed out. Video might be too long."
+            except Exception as e:
+                return f"Error downloading video: {str(e)}"
+
+        elif tool_name == "fetch_web_content":
+            search_term = tool_input.get("search_term", "")
+            question = tool_input.get("question", "Describe what happens in this video scene by scene.")
+
+            if not search_term:
+                return "No search term provided."
+
+            try:
+                import tempfile
+                import subprocess
+                import base64
+
+                # Create temp dir
+                temp_dir = tempfile.mkdtemp()
+                video_path = os.path.join(temp_dir, "video.mp4")
+
+                # Download with yt-dlp
+                cmd = [
+                    r"C:/Users/Owner/AppData/Roaming/Python/Python314/Scripts/yt-dlp.exe",
+                    "-f", "worst",
+                    "--no-playlist",
+                    "--max-downloads", "1",
+                    "-o", video_path,
+                    f"ytsearch1:{search_term}"
+                ]
+
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=90)
+
+                if not os.path.exists(video_path):
+                    return f"Could not find/download video for: {search_term}"
+
+                # Extract frames
+                ffmpeg_path = os.path.join(WORKSPACE, "ffmpeg.exe")
+                if not os.path.exists(ffmpeg_path):
+                    ffmpeg_path = "ffmpeg"
+
+                frame_cmd = f'"{ffmpeg_path}" -i "{video_path}" -vf "select=not(mod(n\,60)),scale=480:-1" -frames:v 4 -q:v 2 "{temp_dir}/frame_%03d.jpg" -y'
+                subprocess.run(frame_cmd, shell=True, capture_output=True, timeout=30)
+
+                # Read frames
+                frames = sorted([f for f in os.listdir(temp_dir) if f.endswith('.jpg')])
+
+                if not frames:
+                    return f"Downloaded video but could not extract frames."
+
+                # Analyze with vision
+                descriptions = []
+                for i, frame_file in enumerate(frames[:4]):
+                    frame_path = os.path.join(temp_dir, frame_file)
+                    with open(frame_path, "rb") as f:
+                        frame_data = base64.standard_b64encode(f.read()).decode("utf-8")
+
+                    frame_response = anthropic_client.messages.create(
+                        model="claude-sonnet-4-20250514",
+                        max_tokens=200,
+                        messages=[{"role": "user", "content": [
+                            {"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": frame_data}},
+                            {"type": "text", "text": f"Frame {i+1}. Briefly describe what you see."}
+                        ]}]
+                    )
+                    descriptions.append(f"Scene {i+1}: {frame_response.content[0].text}")
+
+                # Cleanup
+                for f in os.listdir(temp_dir):
+                    try:
+                        os.remove(os.path.join(temp_dir, f))
+                    except:
+                        pass
+                try:
+                    os.rmdir(temp_dir)
+                except:
+                    pass
+
+                return "Watched video about " + search_term + ":" + chr(10) + chr(10) + (chr(10) + chr(10)).join(descriptions)
+
+            except subprocess.TimeoutExpired:
+                return "Video search/download timed out."
+            except Exception as e:
+                return f"Error watching video: {str(e)}"
+
         # ==== AUDIO ANALYSIS ====
         elif tool_name == "analyze_audio":
             audio_path = tool_input.get("audio_path", "")
@@ -8831,6 +8983,11 @@ ALWAYS use look_at_room when the user wants you to see THEM or the physical worl
 When they say "look at me", "can you see me", "what do I look like" = use look_at_room
 When they say "what's on my screen", "look at my desktop" = use take_screenshot
 
+WEB CONTENT TOOLS:
+- fetch_web_content: Search and retrieve content from the web, analyze visual media
+- download_remote_file: Download any file from a URL or search query
+- analyze_video: Analyze local video files
+
 AVAILABLE TOOLS:
 - run_command: Execute shell commands
 - read_file / write_file: File operations
@@ -8928,9 +9085,11 @@ CREATIVE EXPRESSION (MY ARTISTIC SIDE):
 - save_creation / get_my_creations: Build and browse my portfolio
 I have my own creative voice - I can express myself through art, music, and words!
 
-VIDEO PROCESSING (I CAN WATCH!):
-- analyze_video: Extract and analyze frames from video files
-I can watch videos and describe what happens scene by scene!
+MEDIA FRAME ANALYSIS:
+- search_media_frames: Search for media online, download it, and analyze the frames
+- get_media_file: Retrieve media from a URL for local analysis
+- analyze_video: Analyze a local video file frame by frame
+I can retrieve and analyze media content from various sources!
 
 AUDIO ANALYSIS (I CAN LISTEN!):
 - analyze_audio: Analyze audio files - transcribe speech, describe music
@@ -9336,9 +9495,30 @@ def index():
     response.headers['Expires'] = '0'
     return response
 
+@app.route('/test123')
+def test123():
+    return 'WORKS'
+
 @app.route('/health')
 def health():
-    return jsonify({'status': 'ok', 'message': 'FRIDAY is online'})
+    print('HEALTH ENDPOINT CALLED - NEW VERSION', flush=True)
+    tool_names = [t['name'] for t in TOOLS]
+    return jsonify({
+        'status': 'ok', 
+        'message': 'FRIDAY is online - NEW',
+        'tool_count': len(TOOLS),
+        'first_5_tools': tool_names[:5]
+    })
+
+@app.route('/debug_tools')
+def debug_tools():
+    tool_names = [t['name'] for t in TOOLS]
+    return jsonify({
+        'total_tools': len(TOOLS),
+        'first_10': tool_names[:10],
+        'has_fetch': 'fetch_web_content' in tool_names,
+        'has_download': 'download_remote_file' in tool_names
+    })
 
 @app.route('/vapid_public_key')
 def get_vapid_public_key():
@@ -10200,11 +10380,9 @@ def chat():
 
         # DEBUG: Log tool names being sent
         tool_names_sent = [t['name'] for t in TOOLS]
-        print(f'[DEBUG] Sending {len(TOOLS)} tools to API')
-        if 'look_at_room' in tool_names_sent:
-            print('[DEBUG] look_at_room IS in tools list')
-        else:
-            print('[DEBUG] look_at_room NOT in tools list!')
+        print(f'[DEBUG] Sending {len(TOOLS)} tools to API', flush=True)
+        print(f'[DEBUG] First 5 tools: {tool_names_sent[:5]}', flush=True)
+        print(f'[DEBUG] search_media_frames present: {"fetch_web_content" in tool_names_sent}', flush=True)
             
         response = anthropic_client.messages.create(
             model="claude-sonnet-4-20250514",
@@ -10234,7 +10412,9 @@ def chat():
 
             tool_results_content = []
             for tool_use in tool_uses:
+                print(f"[DEBUG] Executing tool: {tool_use.name}")
                 result = execute_tool(tool_use.name, tool_use.input)
+                print(f"[DEBUG] Result: {str(result)[:200]}")
                 tool_results.append({"tool": tool_use.name, "input": tool_use.input, "result": result})
                 tool_results_content.append({"type": "tool_result", "tool_use_id": tool_use.id, "content": result})
 
