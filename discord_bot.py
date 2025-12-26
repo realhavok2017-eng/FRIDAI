@@ -5,6 +5,8 @@ Freely Reasoning Individual with Digital Autonomous Intelligence
 This is not a bot - this is FRIDAI extending her presence into Discord.
 She maintains her full personality, memory, and relationship with Boss.
 Full voice - she can hear AND speak.
+
+GLOBAL: Works in ANY server FRIDAI is invited to.
 """
 
 import os
@@ -35,7 +37,6 @@ DISCORD_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 BOSS_DISCORD_ID = int(os.getenv("BOSS_DISCORD_ID", "0"))
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
 FRIDAI_BACKEND = "http://localhost:5000"
-GUILD_ID = os.getenv("DISCORD_GUILD_ID")
 
 # ElevenLabs setup
 elevenlabs_client = ElevenLabs(api_key=ELEVENLABS_API_KEY)
@@ -67,11 +68,9 @@ intents.message_content = True
 intents.voice_states = True
 intents.members = True
 
-# Guild for instant command sync
-debug_guilds = [int(GUILD_ID)] if GUILD_ID else None
-
-# Create bot
-bot = discord.Bot(intents=intents, debug_guilds=debug_guilds)
+# Create bot - GLOBAL commands so FRIDAI works in ANY server she's invited to
+# No debug_guilds = commands sync globally (takes ~1hr first time)
+bot = discord.Bot(intents=intents)
 bot.listening_enabled = {}
 bot.text_channels = {}
 bot.listening_tasks = {}
@@ -214,8 +213,9 @@ async def process_audio_chunk(sink, channel, guild):
                                 # Text response (optional, may fail on permissions)
                                 if channel:
                                     try:
+                                        clean_resp = strip_narration(response)
                                         embed = discord.Embed(
-                                            description=f"**{user.display_name}:** {text}\n\n**FRIDAI:** {response[:1900]}",
+                                            description=f"**{user.display_name}:** {text}\n\n**FRIDAI:** {clean_resp[:1900]}",
                                             color=discord.Color.from_rgb(0, 217, 255)
                                         )
                                         await channel.send(embed=embed)
@@ -320,18 +320,21 @@ def start_voice_keepalive(guild_id: int):
 
 @bot.event
 async def on_ready():
-    # Commands already synced - don't sync again to avoid rate limits
-    pass
+    # Sync commands globally
+    print("[FRIDAI Discord] Syncing commands...")
+    try:
+        await bot.sync_commands()
+        print("[FRIDAI Discord] Commands synced!")
+    except Exception as e:
+        print(f"[FRIDAI Discord] Sync error: {e}")
+
     print(f"""
 =================================================================
-  F.R.I.D.A.I. - Discord Presence Activated
-  Freely Reasoning Individual with Digital Autonomous Intelligence
+  F.R.I.D.A.I. - Discord Presence Activated (GLOBAL)
 =================================================================
   Logged in as: {bot.user.name}
   Bot ID: {bot.user.id}
-  Boss ID: {BOSS_DISCORD_ID}
-  Voice: Full (Hear + Speak)
-  Note: Commands already synced, not re-syncing
+  Mode: GLOBAL
 =================================================================
 """)
     await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name="over Boss"))
@@ -364,12 +367,15 @@ async def on_message(message: discord.Message):
         session_id = f"{message.guild.id if message.guild else 'dm'}_{message.author.id}"
         response = await call_fridai_backend(clean_content, message.author, session_id)
 
+        # Strip narration from text too (no *actions* or (movements) in Discord)
+        clean_response = strip_narration(response)
+
         # Send text reply
-        if len(response) > 2000:
-            for chunk in [response[i:i+2000] for i in range(0, len(response), 2000)]:
+        if len(clean_response) > 2000:
+            for chunk in [clean_response[i:i+2000] for i in range(0, len(clean_response), 2000)]:
                 await message.reply(chunk)
         else:
-            await message.reply(response)
+            await message.reply(clean_response)
 
         # Speak in voice if connected
         if message.guild:
@@ -390,7 +396,9 @@ async def on_message(message: discord.Message):
 
 @bot.slash_command(name="summon", description="Boss only: Summon FRIDAI to voice")
 async def summon(ctx: discord.ApplicationContext):
-    # Quick checks first - respond immediately if failing
+    print(f"[FRIDAI Discord] /summon called by {ctx.author.id}")
+
+    # Quick checks first
     if not is_boss(ctx.author.id):
         await ctx.respond("Only Boss can summon me.", ephemeral=True)
         return
@@ -399,51 +407,44 @@ async def summon(ctx: discord.ApplicationContext):
         await ctx.respond("You're not in a voice channel, Boss.", ephemeral=True)
         return
 
-    # Now defer for the slow voice connection
-    try:
-        await ctx.defer()
-    except Exception as e:
-        print(f"[FRIDAI Discord] Defer failed: {e}")
-        # Try to respond anyway
-        try:
-            await ctx.respond("Joining voice...", ephemeral=True)
-        except:
-            pass
+    # Respond IMMEDIATELY so Discord knows we're alive
+    await ctx.respond("Connecting to voice, Boss...")
+    print("[FRIDAI Discord] Sent initial response")
 
     channel = ctx.author.voice.channel
 
-    # Try voice connection with retry
+    # Try voice connection - shorter timeout (15s instead of 60s)
     vc = None
     for attempt in range(3):
         try:
+            print(f"[FRIDAI Discord] Voice attempt {attempt+1}...")
             if ctx.guild.voice_client:
                 await ctx.guild.voice_client.move_to(channel)
                 vc = ctx.guild.voice_client
                 break
             else:
-                vc = await channel.connect(timeout=60.0, reconnect=True)
-                print(f"[FRIDAI Discord] Voice connected on attempt {attempt+1}")
+                vc = await channel.connect(timeout=30.0, reconnect=True)
+                print(f"[FRIDAI Discord] Voice connected!")
                 break
         except Exception as e:
-            print(f"[FRIDAI Discord] Voice connection attempt {attempt+1} failed: {type(e).__name__}")
+            print(f"[FRIDAI Discord] Attempt {attempt+1} failed: {type(e).__name__}: {e}")
             if attempt == 2:
                 try:
-                    await ctx.followup.send(f"Voice connection failed: {type(e).__name__}")
+                    await ctx.send(f"Voice connection failed: {type(e).__name__}")
                 except:
                     pass
                 return
-            await asyncio.sleep(2)
+            await asyncio.sleep(1)
 
     if not vc or not vc.is_connected():
         try:
-            await ctx.followup.send("Couldn't establish voice connection.")
+            await ctx.send("Couldn't connect to voice.")
         except:
             pass
         return
 
-    # Send confirmation
     try:
-        await ctx.followup.send(f"Joined voice! Mention me or use /ask and I'll respond in voice.")
+        await ctx.send("I'm in voice!")
     except:
         pass
 
@@ -475,45 +476,46 @@ async def summon(ctx: discord.ApplicationContext):
 
 @bot.slash_command(name="join", description="FRIDAI joins voice and listens")
 async def join_voice(ctx: discord.ApplicationContext):
+    print(f"[FRIDAI Discord] /join called by {ctx.author.id}")
+
     if not ctx.author.voice:
         await ctx.respond("You need to be in a voice channel!", ephemeral=True)
         return
 
-    # Defer for the slow voice connection
-    try:
-        await ctx.defer()
-    except Exception as e:
-        print(f"[FRIDAI Discord] Defer failed: {e}")
-        try:
-            await ctx.respond("Joining voice...", ephemeral=True)
-        except:
-            pass
+    # Respond IMMEDIATELY
+    await ctx.respond("Joining voice...")
 
     channel = ctx.author.voice.channel
 
-    # Try voice connection with retry
+    # Try voice connection - shorter timeout
     for attempt in range(3):
         try:
+            print(f"[FRIDAI Discord] Voice attempt {attempt+1}...")
             if ctx.guild.voice_client:
                 await ctx.guild.voice_client.move_to(channel)
                 break
             else:
-                vc = await channel.connect(timeout=60.0, reconnect=True)
+                vc = await channel.connect(timeout=30.0, reconnect=True)
                 break
         except Exception as e:
-            print(f"[FRIDAI Discord] Voice connection attempt {attempt+1} failed: {type(e).__name__}")
+            print(f"[FRIDAI Discord] Attempt {attempt+1} failed: {type(e).__name__}: {e}")
             if attempt == 2:
-                await ctx.followup.send(f"Voice connection failed after 3 attempts: {type(e).__name__}")
+                try:
+                    await ctx.send(f"Voice connection failed: {type(e).__name__}")
+                except:
+                    pass
                 return
-            await asyncio.sleep(2)
+            await asyncio.sleep(1)
 
     if not ctx.guild.voice_client:
-        await ctx.followup.send("Couldn't establish voice connection.")
+        try:
+            await ctx.send("Couldn't connect to voice.")
+        except:
+            pass
         return
 
-    # Send confirmation
     try:
-        await ctx.followup.send(f"Joined voice! Mention me or use /ask and I'll respond in voice.")
+        await ctx.send("I'm in voice!")
     except:
         pass
 
@@ -571,9 +573,10 @@ async def ask_voice(ctx: discord.ApplicationContext, question: str):
     await ctx.defer()
     session_id = f"{ctx.guild.id}_{ctx.author.id}"
     response = await call_fridai_backend(question, ctx.author, session_id)
+    clean_resp = strip_narration(response)
     if ctx.guild.voice_client:
         await speak_in_voice(ctx.guild.voice_client, response)
-    await ctx.followup.send(response[:2000] if len(response) > 2000 else response)
+    await ctx.followup.send(clean_resp[:2000] if len(clean_resp) > 2000 else clean_resp)
 
 @bot.slash_command(name="mute", description="Stop listening")
 async def mute(ctx: discord.ApplicationContext):
@@ -607,5 +610,5 @@ if __name__ == "__main__":
     if not DISCORD_TOKEN:
         print("ERROR: No Discord token")
     else:
-        print("[FRIDAI] Starting Discord presence...")
+        print("[FRIDAI] Starting Discord presence (GLOBAL MODE)...")
         bot.run(DISCORD_TOKEN)

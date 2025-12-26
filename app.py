@@ -9507,7 +9507,37 @@ def health():
         'status': 'ok', 
         'message': 'FRIDAY is online - NEW',
         'tool_count': len(TOOLS),
-        'first_5_tools': tool_names[:5]
+        'first_5_tools': tool_names[:5],
+        'routes': [str(rule) for rule in app.url_map.iter_rules()]
+    })
+
+
+@app.route('/fridai_state')
+def fridai_state():
+    """Return current FRIDAI state for desktop avatar synchronization."""
+    print('FRIDAI_STATE CALLED!', flush=True)
+    state = 'idle'
+    if ui_state.get('is_sleeping'):
+        state = 'sleeping'
+    elif ui_state.get('is_speaking'):
+        state = 'speaking'
+    elif ui_state.get('is_listening'):
+        state = 'listening'
+    mood = ui_state.get('mood', 'chill')
+    if mood == 'thinking':
+        state = 'thinking'
+    elif mood == 'working':
+        state = 'working'
+    elif mood == 'excited':
+        state = 'success'
+    elif mood == 'confused':
+        state = 'confused'
+    return jsonify({
+        'state': state,
+        'is_speaking': ui_state.get('is_speaking', False),
+        'is_listening': ui_state.get('is_listening', False),
+        'audio_level': 0.5 if ui_state.get('is_speaking') else 0,
+        'mood': mood
     })
 
 @app.route('/debug_tools')
