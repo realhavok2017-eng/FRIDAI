@@ -10388,6 +10388,57 @@ def transcribe():
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
+@app.route('/analyze-screen', methods=['POST'])
+def analyze_screen():
+    """
+    Screen Awareness endpoint for Unity desktop app.
+    Receives base64 PNG screenshot and analyzes with Claude vision.
+    """
+    try:
+        image_data = request.json.get('image')
+        prompt = request.json.get('prompt', 'Describe what you see on this screen. If there are any errors, issues, or things the user might need help with, point them out. Be concise but helpful.')
+
+        if not image_data:
+            return jsonify({'error': 'No image data provided'}), 400
+
+        # Strip data URL prefix if present
+        if ',' in image_data:
+            image_data = image_data.split(',')[1]
+
+        print(f"[ANALYZE-SCREEN] Received {len(image_data) // 1024}KB image")
+
+        # Call Claude's vision API
+        vision_response = anthropic_client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=1024,
+            messages=[{
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": "image/png",
+                            "data": image_data
+                        }
+                    },
+                    {"type": "text", "text": prompt}
+                ]
+            }]
+        )
+
+        analysis = vision_response.content[0].text
+        print(f"[ANALYZE-SCREEN] Analysis: {analysis[:100]}...")
+
+        return jsonify({
+            'analysis': analysis
+        })
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/chat', methods=['POST'])
 def chat():
     global conversation_history
@@ -10395,6 +10446,13 @@ def chat():
         user_message = request.json.get('message')
         if not user_message:
             return jsonify({'error': 'No message'}), 400
+
+        # Check if this is a Discord request - use faster Haiku model
+        session_id = request.json.get('session_id', '')
+        is_discord = session_id.startswith('discord_')
+        chat_model = "claude-3-5-haiku-20241022" if is_discord else "claude-sonnet-4-20250514"
+        if is_discord:
+            print(f"[FRIDAI] Discord request detected - using Haiku for speed")
 
         # Record that Boss is active (for dream state tracking)
         record_activity()
@@ -10415,7 +10473,7 @@ def chat():
         print(f'[DEBUG] search_media_frames present: {"fetch_web_content" in tool_names_sent}', flush=True)
             
         response = anthropic_client.messages.create(
-            model="claude-sonnet-4-20250514",
+            model=chat_model,
             max_tokens=2048,
             system=get_system_prompt(),
             tools=TOOLS,
@@ -10454,7 +10512,7 @@ def chat():
             recent_history = get_safe_history_slice(conversation_history, MAX_HISTORY_MESSAGES)
 
             response = anthropic_client.messages.create(
-                model="claude-sonnet-4-20250514",
+                model=chat_model,
                 max_tokens=2048,
                 system=get_system_prompt(),
                 tools=TOOLS,
@@ -10501,7 +10559,7 @@ You just used tools but didn't provide a spoken response. You MUST speak now:
 
             # Ask for a follow-up response - use FULL personality
             follow_up = anthropic_client.messages.create(
-                model="claude-sonnet-4-20250514",
+                model=chat_model,
                 max_tokens=512,
                 system=get_system_prompt() + f"\n\n{follow_up_instruction}\n\nTools used: {tool_names}\nResults preview: {tool_results_summary[:500]}",
                 messages=recent_history
